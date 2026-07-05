@@ -79,6 +79,170 @@ assignment1-basics/
 
 ---
 
+## 第 1.5 步：理解测试框架架构
+
+### 三层架构
+
+整个作业的测试框架分三层，像三明治一样：
+
+```
+┌─────────────────────────────────────────────────────────┐
+│                    测试层 (不要动)                         │
+│  tests/test_model.py, test_train_bpe.py, ...            │
+│                                                         │
+│  · Stanford 写好的测试用例                                │
+│  · 包含标准答案 (reference output)                        │
+│  · 调用 adapters.py 中的函数来获取你的输出                  │
+│  · 对比你的输出和标准答案 (torch.allclose)                  │
+├─────────────────────────────────────────────────────────┤
+│                  适配层 (你要填写)                         │
+│  tests/adapters.py                                      │
+│                                                         │
+│  · 20+ 个函数，初始状态全是 raise NotImplementedError      │
+│  · 每个函数对应一个你要实现的模块                           │
+│  · 你在这里 import 你的代码，把参数转接过去                  │
+│  · 不应包含任何实质性逻辑，只是胶水                         │
+├─────────────────────────────────────────────────────────┤
+│                  实现层 (你写代码)                         │
+│  cs336_basics/*.py                                      │
+│                                                         │
+│  · 你自己创建的文件，随意组织                               │
+│  · 所有真正的算法逻辑都写在这里                             │
+│  · 文件名和类名可以自由命名                                │
+└─────────────────────────────────────────────────────────┘
+```
+
+### 数据流动
+
+以 RMSNorm 测试为例，一次测试的完整流程：
+
+```
+test_model.py                    adapters.py                   cs336_basics/model.py
+┌──────────────┐                ┌──────────────┐              ┌──────────────────┐
+│ 1. 生成测试输入│                │              │              │                  │
+│    (随机tensor)│───────────────▶│ 3. run_rmsnorm│─────────────▶│ 4. 你的 RMSNorm  │
+│              │                │    (胶水调用)  │              │    实际计算       │
+│              │                │              │◀─────────────│    返回结果       │
+│ 2. 用 PyTorch │                └──────────────┘              └──────────────────┘
+│   标准实现算出 │                       │
+│   参考答案     │                       │
+│              │◀──────────────────────┘
+│ 5. torch.allclose(你的输出, 参考答案)   │
+│    → PASS 或 FAIL                     │
+└──────────────────────────────────────┘
+```
+
+### adapter 函数的两种类型
+
+**`run_*` 类型** — 直接算一次，返回结果：
+
+```python
+# adapters.py 中的 run_rmsnorm (你要改成这样)
+def run_rmsnorm(d_model, eps, weights, in_features):
+    # 之前是: raise NotImplementedError
+    # 改成:
+    from cs336_basics.model import RMSNorm
+    norm = RMSNorm(d_model, eps=eps)
+    norm.weight.data = weights
+    return norm(in_features)
+```
+
+**`get_*` 类型** — 返回一个类或对象，测试框架自己去调：
+
+```python
+# adapters.py 中的 get_tokenizer (你要改成这样)
+def get_tokenizer(vocab, merges, special_tokens=None):
+    # 之前是: raise NotImplementedError
+    # 改成:
+    from cs336_basics.tokenizer import Tokenizer
+    return Tokenizer(vocab, merges, special_tokens)
+```
+
+### 怎么跑测试
+
+**基本命令**：所有测试命令都以 `uv run pytest` 开头。
+
+```bash
+# 跑某个测试文件的所有测试
+uv run pytest tests/test_model.py -v
+
+# -v 表示 verbose，显示每个测试的名字和 PASS/FAIL
+# 不加 -v 只显示 . (pass) 和 F (fail)
+```
+
+**用 `-k` 筛选特定测试**：
+
+```bash
+# 只跑名字包含 "rmsnorm" 的测试
+uv run pytest -k test_rmsnorm -v
+
+# 组合过滤
+uv run pytest -k "test_multihead_self_attention and not rope" -v
+
+# 排除某些测试
+uv run pytest tests/test_train_bpe.py -k "not speed" -v
+```
+
+**遇到失败时的调试技巧**：
+
+```bash
+# -x 遇到第一个失败就停
+uv run pytest -k test_rmsnorm -v -x
+
+# --tb=short 简短的错误追踪
+uv run pytest -k test_rmsnorm -v --tb=short
+
+# --tb=long 完整的错误追踪（看具体哪行报错）
+uv run pytest -k test_rmsnorm -v --tb=long
+
+# -s 允许 print 输出（默认被 pytest 捕获）
+uv run pytest -k test_rmsnorm -v -s
+```
+
+**查看有哪些测试可以跑**（不真正执行）：
+
+```bash
+uv run pytest tests/test_model.py --collect-only -q
+```
+
+### 测试文件 → adapter 函数 → 你的模块 对应表
+
+| 测试文件 | adapter 函数 | 你要实现的模块 |
+|---------|-------------|--------------|
+| test_train_bpe.py | `run_train_bpe` | BPE 训练算法 |
+| test_tokenizer.py | `get_tokenizer` | Tokenizer 类 (encode/decode) |
+| test_model.py | `run_silu` | SiLU 激活 |
+| test_model.py | `run_softmax` | 数值稳定的 Softmax |
+| test_model.py | `run_linear` | Linear (无 bias) |
+| test_model.py | `run_embedding` | Embedding (查表) |
+| test_model.py | `run_rmsnorm` | RMSNorm |
+| test_model.py | `run_swiglu` | SwiGLU FFN |
+| test_model.py | `run_rope` | RoPE 位置编码 |
+| test_model.py | `run_scaled_dot_product_attention` | 缩放点积注意力 |
+| test_model.py | `run_multihead_self_attention` | 多头注意力 (无 RoPE) |
+| test_model.py | `run_multihead_self_attention_with_rope` | 多头注意力 (带 RoPE) |
+| test_model.py | `run_transformer_block` | Transformer Block |
+| test_model.py | `run_transformer_lm` | 完整 Transformer LM |
+| test_nn_utils.py | `run_cross_entropy` | 交叉熵损失 |
+| test_nn_utils.py | `run_gradient_clipping` | 梯度裁剪 |
+| test_nn_utils.py | `run_get_lr_cosine_schedule` | Cosine LR Schedule |
+| test_optimizer.py | `get_adamw_cls` | AdamW 优化器 |
+| test_data.py | `run_get_batch` | 数据加载 |
+| test_serialization.py | `run_save_checkpoint`, `run_load_checkpoint` | Checkpoint |
+
+### 你的第一次成功测试
+
+建议从最简单的 `run_silu` 开始：
+
+1. 在 `cs336_basics/` 下创建一个文件（比如 `nn_utils.py`），实现 SiLU 函数
+2. 去 `tests/adapters.py` 找到 `run_silu`，把 `raise NotImplementedError` 改成调用你的实现
+3. 跑 `uv run pytest -k test_silu -v`
+4. 看到绿色的 PASSED — 恭喜，框架跑通了！
+
+后面每个模块都是重复这个循环：写实现 → 填 adapter → 跑测试 → 修 bug → 通过。
+
+---
+
 ## 第二步：Section 2 — BPE 分词器（7 题，42 分）
 
 这是分值最高的 section，建议最先做。
