@@ -20,26 +20,36 @@ transformer-circuits/
 │   ├── 2025-biology-of-llm.md
 │   ├── 2025-circuit-tracing.md
 │   └── 2026-global-workspace.md
+├── pdfs/                  # Downloaded papers (PDF or HTML)
+│   ├── 2021-mathematical-framework.html          (6.2 MB, HTML — no arXiv version)
+│   ├── 2022-induction-heads-arxiv2209.11895.pdf   (9.5 MB, arXiv PDF)
+│   ├── 2022-toy-models-superposition-arxiv2209.10652.pdf (4.7 MB, arXiv PDF)
+│   ├── 2023-towards-monosemanticity.html          (20 MB, HTML — no arXiv version)
+│   ├── 2024-scaling-monosemanticity-arxiv2605.29358.pdf  (9.7 MB, arXiv PDF)
+│   ├── 2025-biology-of-llm.html                   (241 KB, HTML — no arXiv version)
+│   └── 2025-circuit-tracing.html                  (271 KB, HTML — no arXiv version)
 ├── concepts/              # Core concepts & mental models
 │   └── glossary.md
 └── notes/                 # Our learning notes & insights
     └── .gitkeep
 ```
 
+> **Note**: 8 篇核心论文中，只有 3 篇上传了 arXiv（有 PDF）。其余 5 篇仅发布在 transformer-circuits.pub，保存为离线 HTML。2026 Global Workspace 论文目前返回 403，尚未公开。
+
 ## Recommended Reading Order
 
 ### Main Quest (read in order)
 
-| # | Paper | Year | One-line Summary |
-|---|-------|------|-----------------|
-| 1 | [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) | 2021 | Residual stream as communication bus; attention heads as independent circuits |
-| 2 | [In-Context Learning and Induction Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html) | 2022 | Induction heads are the primary mechanism behind in-context learning |
-| 3 | [Toy Models of Superposition](https://transformer-circuits.pub/2022/toy_model/index.html) | 2022 | Why neurons encode multiple unrelated concepts (feature > neuron) |
-| 4 | [Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features/index.html) | 2023 | Sparse Autoencoders extract interpretable features from a 1-layer transformer |
-| 5 | [Scaling Monosemanticity](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html) | 2024 | Million-scale features from Claude 3 Sonnet, including safety-relevant ones |
-| 6 | [On the Biology of a Large Language Model](https://transformer-circuits.pub/2025/attribution-graphs/biology.html) | 2025 | Full-scale mechanistic investigation of Claude 3.5 Haiku |
-| 7 | [Circuit Tracing](https://transformer-circuits.pub/2025/attribution-graphs/methods.html) | 2025 | Method to trace step-by-step computation graphs in language models |
-| 8 | [Verbalizable Representations Form a Global Workspace](https://transformer-circuits.pub/2026/global-workspace/index.html) | 2026 | Claude maintains a privileged set of representations it can self-report on |
+| # | Paper | Year | arXiv / Local | One-line Summary |
+|---|-------|------|---------------|-----------------|
+| 1 | [A Mathematical Framework for Transformer Circuits](https://transformer-circuits.pub/2021/framework/index.html) | 2021 | [HTML](pdfs/2021-mathematical-framework.html) | Residual stream as communication bus; attention heads as independent circuits |
+| 2 | [In-Context Learning and Induction Heads](https://transformer-circuits.pub/2022/in-context-learning-and-induction-heads/index.html) | 2022 | [arXiv:2209.11895](https://arxiv.org/abs/2209.11895) / [PDF](pdfs/2022-induction-heads-arxiv2209.11895.pdf) | Induction heads are the primary mechanism behind in-context learning |
+| 3 | [Toy Models of Superposition](https://transformer-circuits.pub/2022/toy_model/index.html) | 2022 | [arXiv:2209.10652](https://arxiv.org/abs/2209.10652) / [PDF](pdfs/2022-toy-models-superposition-arxiv2209.10652.pdf) | Why neurons encode multiple unrelated concepts (feature > neuron) |
+| 4 | [Towards Monosemanticity](https://transformer-circuits.pub/2023/monosemantic-features/index.html) | 2023 | [HTML](pdfs/2023-towards-monosemanticity.html) | Sparse Autoencoders extract interpretable features from a 1-layer transformer |
+| 5 | [Scaling Monosemanticity](https://transformer-circuits.pub/2024/scaling-monosemanticity/index.html) | 2024 | [arXiv:2605.29358](https://arxiv.org/abs/2605.29358) / [PDF](pdfs/2024-scaling-monosemanticity-arxiv2605.29358.pdf) | Million-scale features from Claude 3 Sonnet, including safety-relevant ones |
+| 6 | [On the Biology of a Large Language Model](https://transformer-circuits.pub/2025/attribution-graphs/biology.html) | 2025 | [HTML](pdfs/2025-biology-of-llm.html) | Full-scale mechanistic investigation of Claude 3.5 Haiku |
+| 7 | [Circuit Tracing](https://transformer-circuits.pub/2025/attribution-graphs/methods.html) | 2025 | [HTML](pdfs/2025-circuit-tracing.html) | Method to trace step-by-step computation graphs in language models |
+| 8 | [Verbalizable Representations Form a Global Workspace](https://transformer-circuits.pub/2026/global-workspace/index.html) | 2026 | 403 (未公开) | Claude maintains a privileged set of representations it can self-report on |
 
 ### Side Quests (read as needed)
 
