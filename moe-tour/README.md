@@ -20,7 +20,7 @@
 | 6 | [最优分配促均衡](https://kexue.fm/archives/11619) | 2026-02-22 | **Quantile Balancing 提出** | [06-quantile-balancing.md](06-quantile-balancing.md) |
 | 7 | [动态激活极简解](https://kexue.fm/archives/11626) | 2026-02-23 | QB 动态版：一步 quantile 求解 | [07-dynamic-qb.md](07-dynamic-qb.md) |
 | 番外 | [DeepSeek V4 的 tid2eid](https://kexue.fm/archives/11750) | 2026-05-15 | Hash Routing 映射表生成 | [bonus-hash-routing.md](bonus-hash-routing.md) |
-| 8 | [强制序列级均衡](https://kexue.fm/archives/11760) | 2026-05-22 | 从全局均衡到序列级均衡 | 待写 |
+| 8 | [强制序列级均衡](https://kexue.fm/archives/11760) | 2026-05-22 | 从全局均衡到序列级均衡 | [08-forced-sequence-balance.md](08-forced-sequence-balance.md) |
 | 9 | [门控归一化之争](https://kexue.fm/archives/11782) | 2026-06-17 | Softmax vs Sigmoid，归一化时机 | 待写 |
 
 ## 系列演进脉络

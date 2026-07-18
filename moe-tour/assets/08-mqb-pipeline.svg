@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr8a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="500" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">MQB 核心流程：分桶 → EMA → 分位数 → 偏置校正</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">将 Quantile Balancing 从全局推广到序列级，通过直方图近似实现可并行的滑动分位数</text>
+
+  <!-- Step 1: Sigmoid + Binning -->
+  <rect x="30" y="70" width="190" height="120" rx="8" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <rect x="30" y="70" width="190" height="25" rx="8" fill="#1A73E8" opacity="0.15"/>
+  <rect x="30" y="82" width="190" height="13" fill="#1A73E8" opacity="0.15"/>
+  <text x="125" y="88" text-anchor="middle" font-size="10" font-weight="700" fill="#1A73E8">Step 1: 分桶</text>
+
+  <text x="45" y="112" font-size="9" fill="#3C4043">Router 打分 s ∈ R^(l×n)</text>
+  <text x="45" y="128" font-size="9" fill="#3C4043">→ Sigmoid 映射到 [0,1]</text>
+  <text x="45" y="144" font-size="9" fill="#3C4043">→ 等分 b 个桶 (b=100)</text>
+  <text x="45" y="160" font-size="9" fill="#1A73E8" font-weight="600">h_i,j = one_hot(⌊s_i,j × b⌋)</text>
+  <text x="45" y="176" font-size="8" fill="#5F6368">输出: l × n × b 的 0/1 数组</text>
+
+  <line x1="220" y1="130" x2="245" y2="130" stroke="#5F6368" stroke-width="1" marker-end="url(#arr8a)"/>
+
+  <!-- Step 2: EMA -->
+  <rect x="245" y="70" width="190" height="120" rx="8" fill="white" stroke="#34A853" stroke-width="1.5"/>
+  <rect x="245" y="70" width="190" height="25" rx="8" fill="#34A853" opacity="0.15"/>
+  <rect x="245" y="82" width="190" height="13" fill="#34A853" opacity="0.15"/>
+  <text x="340" y="88" text-anchor="middle" font-size="10" font-weight="700" fill="#137333">Step 2: EMA 滑动平均</text>
+
+  <text x="260" y="112" font-size="9" fill="#3C4043">沿序列维度做 EMA:</text>
+  <text x="260" y="130" font-size="9" fill="#137333" font-weight="600">h̄_i,j = γ·h̄_(i-1),j + (1-γ)·h_i,j</text>
+  <text x="260" y="148" font-size="9" fill="#3C4043">γ = 0.99 (衰减系数)</text>
+  <text x="260" y="166" font-size="9" fill="#5F6368">h̄ 是局部分布的估计</text>
+  <text x="260" y="180" font-size="8" fill="#34A853">线性运算 → 可并行！</text>
+
+  <line x1="435" y1="130" x2="460" y2="130" stroke="#5F6368" stroke-width="1" marker-end="url(#arr8a)"/>
+
+  <!-- Step 3: Quantile from histogram -->
+  <rect x="460" y="70" width="190" height="120" rx="8" fill="white" stroke="#F9AB00" stroke-width="1.5"/>
+  <rect x="460" y="70" width="190" height="25" rx="8" fill="#F9AB00" opacity="0.15"/>
+  <rect x="460" y="82" width="190" height="13" fill="#F9AB00" opacity="0.15"/>
+  <text x="555" y="88" text-anchor="middle" font-size="10" font-weight="700" fill="#E37400">Step 3: 求分位数</text>
+
+  <text x="475" y="112" font-size="9" fill="#3C4043">从 h̄ 的累积分布求分位:</text>
+  <text x="475" y="130" font-size="9" fill="#E37400" font-weight="600">m* = min{m | Σh̄ ≥ 1-k/n}</text>
+  <text x="475" y="148" font-size="9" fill="#3C4043">β_i,j = (m* + 0.5) / b</text>
+  <text x="475" y="166" font-size="9" fill="#5F6368">每个 token 位置都有</text>
+  <text x="475" y="180" font-size="8" fill="#5F6368">自己的局部偏置项</text>
+
+  <line x1="650" y1="130" x2="675" y2="130" stroke="#5F6368" stroke-width="1" marker-end="url(#arr8a)"/>
+
+  <!-- Step 4: Correction -->
+  <rect x="675" y="70" width="155" height="120" rx="8" fill="white" stroke="#AB47BC" stroke-width="1.5"/>
+  <rect x="675" y="70" width="155" height="25" rx="8" fill="#AB47BC" opacity="0.15"/>
+  <rect x="675" y="82" width="155" height="13" fill="#AB47BC" opacity="0.15"/>
+  <text x="752" y="88" text-anchor="middle" font-size="10" font-weight="700" fill="#7B1FA2">Step 4: 校正路由</text>
+
+  <text x="690" y="112" font-size="9" fill="#3C4043">校正后打分:</text>
+  <text x="690" y="130" font-size="9" fill="#7B1FA2" font-weight="600">ŝ_i = s_i - λ·β_i</text>
+  <text x="690" y="148" font-size="9" fill="#3C4043">λ ∈ [0,1] 控制强度</text>
+  <text x="690" y="166" font-size="9" fill="#5F6368">λ=1: 完美序列均衡</text>
+  <text x="690" y="180" font-size="8" fill="#5F6368">λ≈0.3: 效果无损</text>
+
+  <!-- Comparison table -->
+  <rect x="30" y="210" width="800" height="140" rx="8" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="430" y="233" text-anchor="middle" font-size="12" font-weight="700" fill="#202124">三种序列级均衡方案对比</text>
+
+  <!-- Header -->
+  <rect x="40" y="245" width="120" height="24" rx="4" fill="#E0E0E0"/>
+  <text x="100" y="261" text-anchor="middle" font-size="9" font-weight="600" fill="#3C4043">维度</text>
+  <rect x="165" y="245" width="200" height="24" rx="4" fill="#E8F0FE"/>
+  <text x="265" y="261" text-anchor="middle" font-size="9" font-weight="600" fill="#1A73E8">局部中心 (EMA on s)</text>
+  <rect x="370" y="245" width="220" height="24" rx="4" fill="#FEF7E0"/>
+  <text x="480" y="261" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">TTT-style (逐 token β)</text>
+  <rect x="595" y="245" width="225" height="24" rx="4" fill="#E6F4EA"/>
+  <text x="707" y="261" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">MQB (EMA on histogram)</text>
+
+  <!-- Rows -->
+  <text x="100" y="286" text-anchor="middle" font-size="8" fill="#3C4043">EMA 对象</text>
+  <text x="265" y="286" text-anchor="middle" font-size="8" fill="#1967D2">l × n 原始打分</text>
+  <text x="480" y="286" text-anchor="middle" font-size="8" fill="#E37400">expert 激活分布 f</text>
+  <text x="707" y="286" text-anchor="middle" font-size="8" fill="#137333">l × n × b 直方图</text>
+
+  <text x="100" y="304" text-anchor="middle" font-size="8" fill="#3C4043">均衡保证</text>
+  <text x="265" y="304" text-anchor="middle" font-size="8" fill="#EA4335">经验性（无理论保证）</text>
+  <text x="480" y="304" text-anchor="middle" font-size="8" fill="#137333">精确（逐步 SignSGD）</text>
+  <text x="707" y="304" text-anchor="middle" font-size="8" fill="#137333">精确（QB 最优性）</text>
+
+  <text x="100" y="322" text-anchor="middle" font-size="8" fill="#3C4043">并行性</text>
+  <text x="265" y="322" text-anchor="middle" font-size="8" fill="#137333">可并行</text>
+  <text x="480" y="322" text-anchor="middle" font-size="8" fill="#EA4335">非线性 RNN → 不可并行</text>
+  <text x="707" y="322" text-anchor="middle" font-size="8" fill="#137333">线性 EMA → 可并行</text>
+
+  <text x="100" y="340" text-anchor="middle" font-size="8" fill="#3C4043">额外 State</text>
+  <text x="265" y="340" text-anchor="middle" font-size="8" fill="#3C4043">n 维</text>
+  <text x="480" y="340" text-anchor="middle" font-size="8" fill="#3C4043">n 维</text>
+  <text x="707" y="340" text-anchor="middle" font-size="8" fill="#3C4043">n × b 维 (n × 100)</text>
+
+  <!-- TPU Pipeline -->
+  <rect x="30" y="365" width="800" height="125" rx="8" fill="white" stroke="#1A73E8" stroke-width="2"/>
+  <rect x="30" y="365" width="800" height="28" rx="8" fill="#1A73E8" opacity="0.1"/>
+  <text x="430" y="385" text-anchor="middle" font-size="12" font-weight="700" fill="#1A73E8">TPU 上的 MQB 执行映射</text>
+
+  <!-- SparseCore tasks -->
+  <rect x="50" y="400" width="350" height="75" rx="6" fill="#E8F0FE" stroke="#1A73E8"/>
+  <text x="225" y="418" text-anchor="middle" font-size="10" font-weight="600" fill="#1A73E8">SparseCore（4 个/chip）</text>
+  <rect x="65" y="425" width="150" height="20" rx="3" fill="#1A73E8" opacity="0.2"/>
+  <text x="140" y="439" text-anchor="middle" font-size="8" fill="#1967D2">EMA: h̄ = γh̄ + (1-γ)h</text>
+  <rect x="225" y="425" width="160" height="20" rx="3" fill="#1A73E8" opacity="0.2"/>
+  <text x="305" y="439" text-anchor="middle" font-size="8" fill="#1967D2">Quantile: cumsum → find m*</text>
+  <rect x="65" y="450" width="320" height="18" rx="3" fill="#1A73E8" opacity="0.1"/>
+  <text x="225" y="463" text-anchor="middle" font-size="8" fill="#1967D2">Dispatch: s - λβ → Top-K / 动态激活 → All-to-All</text>
+
+  <!-- TensorCore tasks -->
+  <rect x="430" y="400" width="380" height="75" rx="6" fill="#E6F4EA" stroke="#34A853"/>
+  <text x="620" y="418" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">TensorCore（2 个/chip）</text>
+  <rect x="445" y="425" width="160" height="20" rx="3" fill="#34A853" opacity="0.2"/>
+  <text x="525" y="439" text-anchor="middle" font-size="8" fill="#137333">Expert FFN (矩阵乘法)</text>
+  <rect x="615" y="425" width="180" height="20" rx="3" fill="#34A853" opacity="0.2"/>
+  <text x="705" y="439" text-anchor="middle" font-size="8" fill="#137333">Attention (Q·K^T / Softmax·V)</text>
+  <rect x="445" y="450" width="350" height="18" rx="3" fill="#34A853" opacity="0.1"/>
+  <text x="620" y="463" text-anchor="middle" font-size="8" fill="#137333">Gate Score 计算 + Combine 加权（用原始 s，不是 ŝ）</text>
+
+  <rect x="130" y="492" width="600" height="3" rx="1.5" fill="#AB47BC"/>
+</svg>

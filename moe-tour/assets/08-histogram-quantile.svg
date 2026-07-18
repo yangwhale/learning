@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr8c" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="420" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">直方图近似求分位数：MQB 的核心技巧</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">Quantile 无法增量更新 → 改为估计分布 → 分布可 EMA 更新 → 从分布算 Quantile</text>
+
+  <!-- Left: Direct Quantile problem -->
+  <rect x="30" y="65" width="250" height="160" rx="8" fill="white" stroke="#EA4335" stroke-width="1.5"/>
+  <rect x="30" y="65" width="250" height="25" rx="8" fill="#EA4335" opacity="0.15"/>
+  <rect x="30" y="77" width="250" height="13" fill="#EA4335" opacity="0.15"/>
+  <text x="155" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#EA4335">直接求 Quantile 的困难</text>
+
+  <text x="45" y="110" font-size="9" fill="#3C4043">Cumulative Quantile:</text>
+  <text x="45" y="128" font-size="9" fill="#3C4043">β_i = quantile(s[0:i], 1-k/n)</text>
+  <text x="45" y="150" font-size="9" fill="#EA4335" font-weight="600">问题: quantile 是非线性的</text>
+  <text x="45" y="168" font-size="9" fill="#EA4335">→ 无法增量更新</text>
+  <text x="45" y="186" font-size="9" fill="#EA4335">→ 每步重算 → O(l²) 复杂度</text>
+  <text x="45" y="204" font-size="9" fill="#EA4335">→ 非线性 RNN → 不可并行</text>
+
+  <!-- Arrow -->
+  <text x="295" y="145" font-size="18" fill="#34A853" font-weight="700">→</text>
+  <text x="295" y="165" font-size="8" fill="#34A853">关键转换</text>
+
+  <!-- Middle: Histogram approximation -->
+  <rect x="320" y="65" width="250" height="160" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="320" y="65" width="250" height="25" rx="8" fill="#34A853" opacity="0.15"/>
+  <rect x="320" y="77" width="250" height="13" fill="#34A853" opacity="0.15"/>
+  <text x="445" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#137333">直方图近似 (MQB)</text>
+
+  <text x="335" y="110" font-size="9" fill="#3C4043">1. s ∈ [0,1]（Sigmoid 激活）</text>
+  <text x="335" y="128" font-size="9" fill="#3C4043">2. 等分 b=100 桶</text>
+  <text x="335" y="146" font-size="9" fill="#3C4043">3. h = one_hot(⌊s × b⌋) ∈ {0,1}^b</text>
+  <text x="335" y="166" font-size="9" fill="#137333" font-weight="600">4. h̄ = γ·h̄_prev + (1-γ)·h</text>
+  <text x="335" y="186" font-size="9" fill="#137333" font-weight="600">   EMA 是线性的 → 可并行！</text>
+  <text x="335" y="204" font-size="9" fill="#3C4043">5. 从 h̄ 的累积求分位</text>
+
+  <!-- Arrow -->
+  <text x="585" y="145" font-size="18" fill="#1A73E8" font-weight="700">→</text>
+
+  <!-- Right: Result -->
+  <rect x="610" y="65" width="220" height="160" rx="8" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <rect x="610" y="65" width="220" height="25" rx="8" fill="#1A73E8" opacity="0.15"/>
+  <rect x="610" y="77" width="220" height="13" fill="#1A73E8" opacity="0.15"/>
+  <text x="720" y="84" text-anchor="middle" font-size="10" font-weight="700" fill="#1A73E8">从分布求分位数</text>
+
+  <text x="625" y="110" font-size="9" fill="#3C4043">累积直方图 → 找第一个</text>
+  <text x="625" y="128" font-size="9" fill="#3C4043">使累积概率 ≥ 1-k/n 的桶</text>
+  <text x="625" y="150" font-size="9" fill="#1A73E8" font-weight="600">m* = min{m | Σh̄_t ≥ 1-k/n}</text>
+  <text x="625" y="170" font-size="9" fill="#3C4043">β = (m* + 0.5) / b</text>
+  <text x="625" y="192" font-size="9" fill="#5F6368">精度: 1/b = 1%</text>
+  <text x="625" y="208" font-size="8" fill="#5F6368">b=100 → 足够精确</text>
+
+  <!-- Visual: Histogram -->
+  <rect x="30" y="240" width="800" height="170" rx="8" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="430" y="263" text-anchor="middle" font-size="11" font-weight="700" fill="#202124">直方图示意：Expert j 的 Router 打分分布（EMA 后）</text>
+
+  <!-- Histogram bars -->
+  <rect x="80" y="380" width="30" height="10" rx="2" fill="#1A73E8" opacity="0.3"/>
+  <rect x="115" y="370" width="30" height="20" rx="2" fill="#1A73E8" opacity="0.35"/>
+  <rect x="150" y="355" width="30" height="35" rx="2" fill="#1A73E8" opacity="0.4"/>
+  <rect x="185" y="335" width="30" height="55" rx="2" fill="#1A73E8" opacity="0.45"/>
+  <rect x="220" y="310" width="30" height="80" rx="2" fill="#1A73E8" opacity="0.5"/>
+  <rect x="255" y="300" width="30" height="90" rx="2" fill="#1A73E8" opacity="0.55"/>
+  <rect x="290" y="285" width="30" height="105" rx="2" fill="#1A73E8" opacity="0.6"/>
+  <rect x="325" y="290" width="30" height="100" rx="2" fill="#1A73E8" opacity="0.65"/>
+  <rect x="360" y="300" width="30" height="90" rx="2" fill="#1A73E8" opacity="0.7"/>
+  <rect x="395" y="310" width="30" height="80" rx="2" fill="#1A73E8" opacity="0.65"/>
+  <rect x="430" y="325" width="30" height="65" rx="2" fill="#1A73E8" opacity="0.6"/>
+  <rect x="465" y="340" width="30" height="50" rx="2" fill="#1A73E8" opacity="0.55"/>
+  <rect x="500" y="355" width="30" height="35" rx="2" fill="#1A73E8" opacity="0.5"/>
+  <rect x="535" y="365" width="30" height="25" rx="2" fill="#1A73E8" opacity="0.45"/>
+  <rect x="570" y="375" width="30" height="15" rx="2" fill="#1A73E8" opacity="0.4"/>
+  <rect x="605" y="380" width="30" height="10" rx="2" fill="#1A73E8" opacity="0.35"/>
+
+  <!-- X axis labels -->
+  <text x="95" y="398" text-anchor="middle" font-size="7" fill="#5F6368">0.0</text>
+  <text x="270" y="398" text-anchor="middle" font-size="7" fill="#5F6368">0.3</text>
+  <text x="445" y="398" text-anchor="middle" font-size="7" fill="#5F6368">0.6</text>
+  <text x="620" y="398" text-anchor="middle" font-size="7" fill="#5F6368">1.0</text>
+
+  <!-- Quantile line -->
+  <line x1="430" y1="275" x2="430" y2="395" stroke="#EA4335" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="440" y="280" font-size="9" font-weight="600" fill="#EA4335">β = 1-k/n 分位数</text>
+  <text x="440" y="294" font-size="8" fill="#EA4335">右侧面积 = k/n</text>
+
+  <!-- Shade right side -->
+  <rect x="430" y="325" width="30" height="65" rx="0" fill="#EA4335" opacity="0.15"/>
+  <rect x="465" y="340" width="30" height="50" rx="0" fill="#EA4335" opacity="0.15"/>
+  <rect x="500" y="355" width="30" height="35" rx="0" fill="#EA4335" opacity="0.15"/>
+  <rect x="535" y="365" width="30" height="25" rx="0" fill="#EA4335" opacity="0.15"/>
+  <rect x="570" y="375" width="30" height="15" rx="0" fill="#EA4335" opacity="0.15"/>
+  <rect x="605" y="380" width="30" height="10" rx="0" fill="#EA4335" opacity="0.15"/>
+
+  <!-- Annotation -->
+  <rect x="660" y="290" width="155" height="70" rx="6" fill="#E6F4EA" stroke="#34A853"/>
+  <text x="738" y="310" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">TPU 友好</text>
+  <text x="738" y="328" text-anchor="middle" font-size="8" fill="#137333">EMA: 线性 → SC offload</text>
+  <text x="738" y="343" text-anchor="middle" font-size="8" fill="#137333">cumsum: 扫描 → SC 原生</text>
+  <text x="738" y="358" text-anchor="middle" font-size="8" fill="#137333">one_hot: 离散 → 整数运算</text>
+</svg>
