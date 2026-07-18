@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 460" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr7a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="460" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Top-K 固定激活 vs 动态激活（阈值模式）</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">去掉"每 token 选 k 个"约束 → 难 token 多激活、易 token 少激活 → 计算更高效</text>
+
+  <!-- Left: Top-K fixed -->
+  <rect x="30" y="65" width="390" height="375" rx="8" fill="white" stroke="#EA4335" stroke-width="2"/>
+  <rect x="30" y="65" width="390" height="28" rx="8" fill="#EA4335"/>
+  <rect x="30" y="80" width="390" height="13" fill="#EA4335"/>
+  <text x="225" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Top-K 固定激活（第 6 篇）</text>
+
+  <text x="50" y="118" font-size="10" font-weight="600" fill="#3C4043">约束</text>
+  <rect x="50" y="125" width="350" height="36" rx="4" fill="#FCE8E6"/>
+  <text x="225" y="142" text-anchor="middle" font-size="10" fill="#C5221F">每 token 恰好选 k 个 + 每 expert 恰好 mk/n 个</text>
+  <text x="225" y="156" text-anchor="middle" font-size="9" fill="#C5221F">两个等式约束 → 需要 α 和 β 两组乘子交替求解</text>
+
+  <!-- Token examples -->
+  <text x="50" y="185" font-size="10" font-weight="600" fill="#3C4043">示例：4 个 token, 8 个 expert, k=2</text>
+
+  <!-- Easy token forced to use k=2 -->
+  <rect x="50" y="198" width="100" height="24" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="100" y="214" text-anchor="middle" font-size="9" fill="#1A73E8">简单 token</text>
+  <text x="165" y="214" font-size="9" fill="#5F6368">→ E3, E7</text>
+  <text x="280" y="214" font-size="9" fill="#EA4335">被迫用 2 个（浪费）</text>
+
+  <rect x="50" y="228" width="100" height="24" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="100" y="244" text-anchor="middle" font-size="9" fill="#1A73E8">简单 token</text>
+  <text x="165" y="244" font-size="9" fill="#5F6368">→ E1, E5</text>
+  <text x="280" y="244" font-size="9" fill="#EA4335">被迫用 2 个（浪费）</text>
+
+  <rect x="50" y="258" width="100" height="24" rx="4" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="100" y="274" text-anchor="middle" font-size="9" fill="#E37400">困难 token</text>
+  <text x="165" y="274" font-size="9" fill="#5F6368">→ E2, E6</text>
+  <text x="280" y="274" font-size="9" fill="#EA4335">只给 2 个（不够）</text>
+
+  <rect x="50" y="288" width="100" height="24" rx="4" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="100" y="304" text-anchor="middle" font-size="9" fill="#E37400">困难 token</text>
+  <text x="165" y="304" font-size="9" fill="#5F6368">→ E4, E8</text>
+  <text x="280" y="304" font-size="9" fill="#EA4335">只给 2 个（不够）</text>
+
+  <text x="50" y="335" font-size="10" font-weight="600" fill="#3C4043">操作开销</text>
+  <rect x="50" y="342" width="350" height="22" rx="4" fill="#FCE8E6"/>
+  <text x="225" y="358" text-anchor="middle" font-size="9" fill="#C5221F">需要 argsort / partial sort（Top-K 排序）</text>
+  <text x="50" y="380" font-size="9" fill="#5F6368">TPU 上 argsort 昂贵：m 个 token × n 个 expert 做排序</text>
+  <text x="50" y="396" font-size="9" fill="#5F6368">交替迭代 α, β 增加计算和同步开销</text>
+
+  <rect x="50" y="408" width="350" height="22" rx="4" fill="#EA4335" opacity="0.1"/>
+  <text x="225" y="423" text-anchor="middle" font-size="9" font-weight="600" fill="#C5221F">每 token 激活数固定 = 资源分配不灵活</text>
+
+  <!-- Right: Dynamic activation -->
+  <rect x="440" y="65" width="390" height="375" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="440" y="65" width="390" height="28" rx="8" fill="#34A853"/>
+  <rect x="440" y="80" width="390" height="13" fill="#34A853"/>
+  <text x="635" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">动态激活（第 7 篇）</text>
+
+  <text x="460" y="118" font-size="10" font-weight="600" fill="#3C4043">约束</text>
+  <rect x="460" y="125" width="350" height="36" rx="4" fill="#E6F4EA"/>
+  <text x="635" y="142" text-anchor="middle" font-size="10" fill="#137333">只保留：每 expert 恰好 mk/n 个</text>
+  <text x="635" y="156" text-anchor="middle" font-size="9" fill="#137333">一个等式约束 → 只需 β 一组乘子 → 一步求解</text>
+
+  <!-- Token examples -->
+  <text x="460" y="185" font-size="10" font-weight="600" fill="#3C4043">示例：同样 4 个 token, 8 个 expert</text>
+
+  <rect x="460" y="198" width="100" height="24" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="510" y="214" text-anchor="middle" font-size="9" fill="#1A73E8">简单 token</text>
+  <text x="575" y="214" font-size="9" fill="#5F6368">→ E3</text>
+  <text x="680" y="214" font-size="9" fill="#137333">1 个就够 ✓</text>
+
+  <rect x="460" y="228" width="100" height="24" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="510" y="244" text-anchor="middle" font-size="9" fill="#1A73E8">简单 token</text>
+  <text x="575" y="244" font-size="9" fill="#5F6368">→ E5</text>
+  <text x="680" y="244" font-size="9" fill="#137333">1 个就够 ✓</text>
+
+  <rect x="460" y="258" width="100" height="24" rx="4" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="510" y="274" text-anchor="middle" font-size="9" fill="#E37400">困难 token</text>
+  <text x="575" y="274" font-size="9" fill="#5F6368">→ E2, E4, E6</text>
+  <text x="680" y="274" font-size="9" fill="#137333">3 个，够了 ✓</text>
+
+  <rect x="460" y="288" width="100" height="24" rx="4" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="510" y="304" text-anchor="middle" font-size="9" fill="#E37400">困难 token</text>
+  <text x="575" y="304" font-size="9" fill="#5F6368">→ E1, E6, E7, E8</text>
+  <text x="680" y="304" font-size="9" fill="#137333">4 个，充足 ✓</text>
+
+  <text x="460" y="335" font-size="10" font-weight="600" fill="#3C4043">操作开销</text>
+  <rect x="460" y="342" width="350" height="22" rx="4" fill="#E6F4EA"/>
+  <text x="635" y="358" text-anchor="middle" font-size="9" fill="#137333">只需比较 s_{i,j} - β_j > 0（逐元素比较）</text>
+  <text x="460" y="380" font-size="9" fill="#5F6368">TPU 上超快：纯 element-wise 比较，无排序</text>
+  <text x="460" y="396" font-size="9" fill="#5F6368">只有 β 更新需要一次 quantile（可 SparseCore offload）</text>
+
+  <rect x="460" y="408" width="350" height="22" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="635" y="423" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">资源自适应：难 token 多投入、易 token 少浪费</text>
+
+  <!-- Bottom -->
+  <rect x="130" y="448" width="600" height="3" rx="1.5" fill="#1A73E8"/>
+</svg>

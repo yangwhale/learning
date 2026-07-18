@@ -1,0 +1,100 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 500" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="500" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">TPU 上三种 MoE 路由的硬件执行对比</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">GShard → Top-K QB → 动态 QB：XLA 编译友好度逐步提升</text>
+
+  <!-- Row 1: GShard -->
+  <rect x="30" y="65" width="800" height="120" rx="8" fill="white" stroke="#EA4335" stroke-width="1.5"/>
+  <text x="50" y="88" font-size="11" font-weight="700" fill="#C5221F">GShard (capacity_factor)</text>
+  <text x="300" y="88" font-size="9" fill="#5F6368">— TPU 上的传统方案（MaxText 当前默认）</text>
+
+  <!-- Pipeline blocks -->
+  <rect x="50" y="100" width="120" height="35" rx="4" fill="#FBBC04" opacity="0.3" stroke="#F9AB00"/>
+  <text x="110" y="122" text-anchor="middle" font-size="9" fill="#E37400">Router Top-K</text>
+
+  <rect x="180" y="100" width="80" height="35" rx="4" fill="#EA4335" opacity="0.2" stroke="#EA4335"/>
+  <text x="220" y="122" text-anchor="middle" font-size="9" fill="#C5221F">Pad/Drop</text>
+
+  <rect x="270" y="100" width="50" height="35" rx="4" fill="#AB47BC" opacity="0.2" stroke="#AB47BC"/>
+  <text x="295" y="118" text-anchor="middle" font-size="8" fill="#7B1FA2">Host</text>
+  <text x="295" y="128" text-anchor="middle" font-size="8" fill="#7B1FA2">Sync</text>
+
+  <rect x="330" y="100" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="395" y="122" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (动态)</text>
+
+  <rect x="470" y="100" width="140" height="35" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="540" y="122" text-anchor="middle" font-size="9" fill="#137333">Expert FFN</text>
+
+  <rect x="620" y="100" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="685" y="122" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (动态)</text>
+
+  <!-- Problems -->
+  <text x="50" y="158" font-size="9" fill="#EA4335">问题：padding ~33% 算力浪费 · token dropping 信息丢失 · Host 同步中断 XLA pipeline · 动态形状无法 overlap</text>
+  <rect x="760" y="100" width="55" height="35" rx="4" fill="#EA4335" opacity="0.15"/>
+  <text x="788" y="118" text-anchor="middle" font-size="8" fill="#C5221F" font-weight="600">~33%</text>
+  <text x="788" y="130" text-anchor="middle" font-size="8" fill="#C5221F">浪费</text>
+
+  <!-- Row 2: Top-K QB -->
+  <rect x="30" y="195" width="800" height="120" rx="8" fill="white" stroke="#F9AB00" stroke-width="1.5"/>
+  <text x="50" y="218" font-size="11" font-weight="700" fill="#E37400">Top-K QB（第 6 篇）</text>
+  <text x="250" y="218" font-size="9" fill="#5F6368">— 精确均衡，静态形状</text>
+
+  <rect x="50" y="230" width="120" height="35" rx="4" fill="#FBBC04" opacity="0.3" stroke="#F9AB00"/>
+  <text x="110" y="252" text-anchor="middle" font-size="9" fill="#E37400">α-β 交替</text>
+
+  <rect x="180" y="230" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.3" stroke="#1A73E8"/>
+  <text x="245" y="252" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (静态!)</text>
+
+  <rect x="320" y="230" width="160" height="35" rx="4" fill="#34A853" opacity="0.3" stroke="#34A853"/>
+  <text x="400" y="252" text-anchor="middle" font-size="9" fill="#137333">Expert FFN (零 padding)</text>
+
+  <rect x="490" y="230" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.3" stroke="#1A73E8"/>
+  <text x="555" y="252" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (静态!)</text>
+
+  <rect x="630" y="230" width="80" height="35" rx="4" fill="#FBBC04" opacity="0.3" stroke="#F9AB00"/>
+  <text x="670" y="252" text-anchor="middle" font-size="9" fill="#E37400">更新 β</text>
+
+  <text x="50" y="288" font-size="9" fill="#137333">改进：零 padding · 零 dropping · XLA 全编译 · compute-comm overlap</text>
+  <text x="50" y="302" font-size="9" fill="#EA4335">残留：α-β 交替需要两次 partial sort（m 维 + n 维）· 每 token 激活数固定为 k</text>
+  <rect x="760" y="230" width="55" height="35" rx="4" fill="#34A853" opacity="0.15"/>
+  <text x="788" y="248" text-anchor="middle" font-size="8" fill="#137333" font-weight="600">0%</text>
+  <text x="788" y="260" text-anchor="middle" font-size="8" fill="#137333">浪费</text>
+
+  <!-- Row 3: Dynamic QB -->
+  <rect x="30" y="325" width="800" height="120" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="30" y="325" width="800" height="30" rx="8" fill="#34A853" opacity="0.1"/>
+  <text x="50" y="348" font-size="11" font-weight="700" fill="#137333">动态 QB（第 7 篇）</text>
+  <text x="250" y="348" font-size="9" fill="#5F6368">— 最高效：一步 quantile + element-wise 比较</text>
+
+  <rect x="50" y="363" width="80" height="35" rx="4" fill="#34A853" opacity="0.3" stroke="#34A853"/>
+  <text x="90" y="385" text-anchor="middle" font-size="9" fill="#137333">一步 β</text>
+
+  <rect x="140" y="363" width="100" height="35" rx="4" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="190" y="381" text-anchor="middle" font-size="8" fill="#1967D2">s - β > 0 ?</text>
+  <text x="190" y="393" text-anchor="middle" font-size="8" fill="#1967D2">(element-wise)</text>
+
+  <rect x="250" y="363" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.3" stroke="#1A73E8"/>
+  <text x="315" y="385" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (静态!)</text>
+
+  <rect x="390" y="363" width="160" height="35" rx="4" fill="#34A853" opacity="0.3" stroke="#34A853"/>
+  <text x="470" y="385" text-anchor="middle" font-size="9" fill="#137333">Expert FFN (零 padding)</text>
+
+  <rect x="560" y="363" width="130" height="35" rx="4" fill="#1A73E8" opacity="0.3" stroke="#1A73E8"/>
+  <text x="625" y="385" text-anchor="middle" font-size="9" fill="#1967D2">All-to-All (静态!)</text>
+
+  <rect x="700" y="363" width="60" height="35" rx="4" fill="#34A853" opacity="0.3" stroke="#34A853"/>
+  <text x="730" y="385" text-anchor="middle" font-size="9" fill="#137333">EMA β</text>
+
+  <text x="50" y="420" font-size="9" fill="#137333">全面超越：免排序（比 Top-K 更快）· 动态激活（难 token 多投入）· 一步 quantile 无交替 · EMA 防过拟合</text>
+  <text x="50" y="434" font-size="9" fill="#1A73E8" font-weight="600">TPU 最优：quantile + EMA 可 SparseCore offload → TensorCore 100% 利用率</text>
+  <rect x="760" y="363" width="55" height="35" rx="4" fill="#34A853" opacity="0.25"/>
+  <text x="788" y="381" text-anchor="middle" font-size="8" fill="#137333" font-weight="600">0%</text>
+  <text x="788" y="393" text-anchor="middle" font-size="8" fill="#137333">浪费</text>
+
+  <!-- Bottom summary -->
+  <rect x="130" y="455" width="600" height="36" rx="6" fill="#E8F0FE"/>
+  <text x="430" y="472" text-anchor="middle" font-size="10" fill="#1A73E8" font-weight="600">TPU v7 SparseCore 分工</text>
+  <text x="430" y="486" text-anchor="middle" font-size="9" fill="#1967D2">SparseCore: router + quantile + dispatch + All-to-All  |  TensorCore: Expert FFN + Attention</text>
+</svg>

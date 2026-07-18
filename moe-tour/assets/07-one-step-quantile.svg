@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr7b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="420" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">一步 Quantile vs 交替迭代：简化路径</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">去掉 token 约束后，β 可以独立逐列求解 → 无需 α → 无需交替 → 一步到位</text>
+
+  <!-- Left: Top-K QB (Article 6) -->
+  <rect x="30" y="65" width="380" height="340" rx="8" fill="white" stroke="#F9AB00" stroke-width="2"/>
+  <rect x="30" y="65" width="380" height="28" rx="8" fill="#F9AB00"/>
+  <rect x="30" y="80" width="380" height="13" fill="#F9AB00"/>
+  <text x="220" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Top-K QB（第 6 篇）</text>
+
+  <!-- Step 1 -->
+  <rect x="50" y="108" width="340" height="55" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="70" y="125" font-size="10" font-weight="600" fill="#E37400">Step 1: 固定 β, 求 α</text>
+  <text x="70" y="142" font-size="9" fill="#5F6368">α_i = {s_{i,j} - β_j} 中第 (k+1) 大值</text>
+  <text x="70" y="156" font-size="9" fill="#5F6368">需要对每个 token 做一次 partial sort</text>
+
+  <line x1="220" y1="163" x2="220" y2="178" stroke="#F9AB00" stroke-width="1.5" marker-end="url(#arr7b)"/>
+
+  <!-- Step 2 -->
+  <rect x="50" y="178" width="340" height="55" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="70" y="195" font-size="10" font-weight="600" fill="#E37400">Step 2: 固定 α, 求 β</text>
+  <text x="70" y="212" font-size="9" fill="#5F6368">β_j = {s_{i,j} - α_i} 中第 (mk/n+1) 大值</text>
+  <text x="70" y="226" font-size="9" fill="#5F6368">需要对每个 expert 做一次 partial sort</text>
+
+  <line x1="220" y1="233" x2="220" y2="248" stroke="#F9AB00" stroke-width="1.5" marker-end="url(#arr7b)"/>
+
+  <!-- Step 3 -->
+  <rect x="50" y="248" width="340" height="40" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="70" y="265" font-size="10" font-weight="600" fill="#E37400">Step 3: 用 α, β 做决策</text>
+  <text x="70" y="280" font-size="9" fill="#5F6368">x_{i,j} = 1 if s_{i,j} - α_i - β_j > 0</text>
+
+  <rect x="50" y="305" width="340" height="30" rx="4" fill="#EA4335" opacity="0.1"/>
+  <text x="220" y="325" text-anchor="middle" font-size="10" fill="#C5221F">两次 partial sort + 交替迭代</text>
+
+  <rect x="50" y="345" width="340" height="45" rx="4" fill="#FCE8E6"/>
+  <text x="220" y="363" text-anchor="middle" font-size="9" fill="#A50E0E">TPU 影响：partial sort 在大 m 上昂贵</text>
+  <text x="220" y="380" text-anchor="middle" font-size="9" fill="#A50E0E">α 维度 = m（batch×seq_len）→ 分布式下需跨设备通信</text>
+
+  <!-- Arrow -->
+  <text x="430" y="240" text-anchor="middle" font-size="24" fill="#34A853" font-weight="700">→</text>
+  <text x="430" y="260" text-anchor="middle" font-size="9" fill="#34A853" font-weight="600">去掉 token 约束</text>
+
+  <!-- Right: Dynamic QB (Article 7) -->
+  <rect x="450" y="65" width="380" height="340" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="450" y="65" width="380" height="28" rx="8" fill="#34A853"/>
+  <rect x="450" y="80" width="380" height="13" fill="#34A853"/>
+  <text x="640" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">动态 QB（第 7 篇）</text>
+
+  <!-- Single step -->
+  <rect x="470" y="108" width="340" height="120" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="490" y="128" font-size="10" font-weight="600" fill="#137333">唯一步骤：直接求 β</text>
+  <text x="490" y="150" font-size="10" fill="#3C4043">β_j = s_{·,j} 的 (1 - k/n) 分位数</text>
+  <text x="490" y="172" font-size="9" fill="#5F6368">每个 expert 的 β 独立计算：</text>
+  <text x="490" y="190" font-size="9" fill="#5F6368">取第 j 列的 m 个打分，找第 (mk/n+1) 大值</text>
+  <text x="490" y="210" font-size="9" fill="#137333" font-weight="600">无 α → 无交替 → 一步出结果</text>
+
+  <line x1="640" y1="228" x2="640" y2="248" stroke="#34A853" stroke-width="1.5" marker-end="url(#arr7b)"/>
+
+  <!-- Decision -->
+  <rect x="470" y="248" width="340" height="50" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="490" y="268" font-size="10" font-weight="600" fill="#137333">激活决策：逐元素比较</text>
+  <text x="490" y="288" font-size="10" fill="#3C4043">x_{i,j} = 1 if s_{i,j} - β_j > 0</text>
+
+  <rect x="470" y="315" width="340" height="30" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="640" y="335" text-anchor="middle" font-size="10" fill="#137333">一次 quantile + 逐元素比较</text>
+
+  <rect x="470" y="355" width="340" height="45" rx="4" fill="#E6F4EA"/>
+  <text x="640" y="373" text-anchor="middle" font-size="9" fill="#0D652D">TPU 友好：β 只有 n 维（expert 数），与设备数无关</text>
+  <text x="640" y="390" text-anchor="middle" font-size="9" fill="#0D652D">quantile 可 SparseCore offload，比较是纯 element-wise</text>
+
+  <!-- Bottom comparison -->
+  <rect x="130" y="412" width="600" height="3" rx="1.5" fill="#34A853"/>
+</svg>
