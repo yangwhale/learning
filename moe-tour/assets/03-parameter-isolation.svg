@@ -1,0 +1,92 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr4" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+    <marker id="arr4R" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#EA4335"/>
+    </marker>
+    <marker id="arr4G" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#34A853"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="400" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Loss-Free 的核心创新：参数隔离</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">Aux Loss 的真正问题不是"有额外 loss"，而是两个 loss 优化同一组参数 → 方向冲突</text>
+
+  <!-- Left: Aux Loss approach -->
+  <rect x="30" y="65" width="385" height="310" rx="8" fill="#FCE8E6" stroke="#EA4335" stroke-width="1.5"/>
+  <text x="222" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#C5221F">Aux Loss：共享参数，方向冲突</text>
+
+  <!-- Model parameters -->
+  <rect x="120" y="110" width="200" height="40" rx="6" fill="white" stroke="#5F6368" stroke-width="1.5"/>
+  <text x="220" y="135" text-anchor="middle" font-size="12" font-weight="600" fill="#202124">全体参数 θ</text>
+  <text x="220" y="148" text-anchor="middle" font-size="8" fill="#5F6368">(Router + Expert + Attention + ...)</text>
+
+  <!-- Two losses pulling -->
+  <rect x="55" y="200" width="140" height="50" rx="6" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="125" y="222" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">L_main (LM Loss)</text>
+  <text x="125" y="240" text-anchor="middle" font-size="9" fill="#5F6368">学好语言建模</text>
+
+  <rect x="245" y="200" width="140" height="50" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="315" y="222" text-anchor="middle" font-size="11" font-weight="600" fill="#E37400">α · L_aux</text>
+  <text x="315" y="240" text-anchor="middle" font-size="9" fill="#5F6368">促进负载均衡</text>
+
+  <!-- Arrows from both losses to params -->
+  <line x1="125" y1="200" x2="190" y2="155" stroke="#1A73E8" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="315" y1="200" x2="250" y2="155" stroke="#F9AB00" stroke-width="1.5" marker-end="url(#arr4)"/>
+
+  <!-- Conflict icon -->
+  <text x="220" y="185" text-anchor="middle" font-size="20" fill="#EA4335">⚡</text>
+
+  <!-- Problem description -->
+  <rect x="50" y="270" width="345" height="90" rx="6" fill="white" stroke="#EA4335" stroke-width="1"/>
+  <text x="222" y="290" text-anchor="middle" font-size="10" font-weight="600" fill="#C5221F">问题</text>
+  <text x="65" y="310" font-size="9" fill="#3C4043">1. 两个 loss 优化同一组参数 → 梯度方向冲突</text>
+  <text x="65" y="326" font-size="9" fill="#3C4043">2. α 太大 → 均衡好但模型质量差</text>
+  <text x="65" y="342" font-size="9" fill="#3C4043">3. α 太小 → 均衡差但模型质量好</text>
+  <text x="65" y="358" font-size="9" fill="#EA4335" font-weight="600">最优 α 取决于 n_expert, k, 训练阶段... 极难调</text>
+
+  <!-- Right: Loss-Free approach -->
+  <rect x="445" y="65" width="385" height="310" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="637" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">Loss-Free：参数隔离，各司其职</text>
+
+  <!-- Two parameter groups -->
+  <rect x="480" y="110" width="150" height="40" rx="6" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="555" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">模型参数 θ</text>
+  <text x="555" y="145" text-anchor="middle" font-size="8" fill="#5F6368">(Router + Expert + ...)</text>
+
+  <rect x="660" y="110" width="140" height="40" rx="6" fill="white" stroke="#34A853" stroke-width="1.5"/>
+  <text x="730" y="130" text-anchor="middle" font-size="11" font-weight="600" fill="#34A853">偏置向量 b</text>
+  <text x="730" y="145" text-anchor="middle" font-size="8" fill="#5F6368">(只有 n 个标量)</text>
+
+  <!-- Two losses - each to its own params -->
+  <rect x="480" y="200" width="150" height="50" rx="6" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="555" y="222" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">L_main (LM Loss)</text>
+  <text x="555" y="240" text-anchor="middle" font-size="9" fill="#5F6368">只优化 θ</text>
+
+  <rect x="660" y="200" width="140" height="50" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="730" y="222" text-anchor="middle" font-size="11" font-weight="600" fill="#137333">L_balance</text>
+  <text x="730" y="240" text-anchor="middle" font-size="9" fill="#5F6368">只优化 b</text>
+
+  <!-- Arrows - no conflict -->
+  <line x1="555" y1="200" x2="555" y2="155" stroke="#1A73E8" stroke-width="1.5" marker-end="url(#arr4)"/>
+  <line x1="730" y1="200" x2="730" y2="155" stroke="#34A853" stroke-width="1.5" marker-end="url(#arr4G)"/>
+
+  <!-- Harmony icon -->
+  <text x="640" y="185" text-anchor="middle" font-size="16" fill="#34A853">||</text>
+
+  <!-- Benefit description -->
+  <rect x="465" y="270" width="345" height="90" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="637" y="290" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">优势</text>
+  <text x="480" y="310" font-size="9" fill="#3C4043">1. 两个 loss 优化不同参数 → 零干扰</text>
+  <text x="480" y="326" font-size="9" fill="#3C4043">2. LM Loss 不受均衡约束影响 → 模型质量最优</text>
+  <text x="480" y="342" font-size="9" fill="#3C4043">3. b 的更新规则极简 → 实现成本近零</text>
+  <text x="480" y="358" font-size="9" fill="#137333" font-weight="600">关键洞察：一个偏置向量足以实现负载均衡</text>
+
+  <!-- Bottom -->
+  <rect x="130" y="385" width="600" height="6" rx="3" fill="#34A853" opacity="0.2"/>
+</svg>

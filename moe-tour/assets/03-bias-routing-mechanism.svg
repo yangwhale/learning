@@ -1,0 +1,108 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="420" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Loss-Free：偏置 b 如何重新分配 token</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">不改变 Router 打分 ρ，只在排序时加 b → argtop_k(ρ + b)</text>
+
+  <!-- Left: Without bias -->
+  <rect x="30" y="65" width="390" height="340" rx="8" fill="#FCE8E6" stroke="#EA4335" stroke-width="1.5"/>
+  <text x="225" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#C5221F">传统：argtop_k(ρ)</text>
+  <text x="225" y="108" text-anchor="middle" font-size="10" fill="#A50E0E">Router 打高分的 expert 被反复选中 → 负载不均</text>
+
+  <!-- Expert score bars - unbalanced -->
+  <text x="55" y="135" font-size="10" fill="#5F6368" font-weight="600">Router 打分 ρ：</text>
+
+  <text x="55" y="158" font-size="9" fill="#3C4043">E1</text>
+  <rect x="80" y="147" width="280" height="16" rx="3" fill="#1A73E8" opacity="0.85"/>
+  <text x="370" y="159" font-size="9" fill="#1A73E8" font-weight="600">0.92 ★</text>
+
+  <text x="55" y="180" font-size="9" fill="#3C4043">E2</text>
+  <rect x="80" y="169" width="260" height="16" rx="3" fill="#1A73E8" opacity="0.75"/>
+  <text x="350" y="181" font-size="9" fill="#1A73E8" font-weight="600">0.85 ★</text>
+
+  <text x="55" y="202" font-size="9" fill="#3C4043">E3</text>
+  <rect x="80" y="191" width="200" height="16" rx="3" fill="#1A73E8" opacity="0.55"/>
+  <text x="290" y="203" font-size="9" fill="#5F6368">0.66</text>
+
+  <text x="55" y="224" font-size="9" fill="#3C4043">E4</text>
+  <rect x="80" y="213" width="170" height="16" rx="3" fill="#1A73E8" opacity="0.45"/>
+  <text x="260" y="225" font-size="9" fill="#5F6368">0.56</text>
+
+  <text x="55" y="246" font-size="9" fill="#3C4043">E5</text>
+  <rect x="80" y="235" width="90" height="16" rx="3" fill="#EA4335" opacity="0.35"/>
+  <text x="180" y="247" font-size="9" fill="#EA4335">0.30</text>
+
+  <text x="55" y="268" font-size="9" fill="#3C4043">E6</text>
+  <rect x="80" y="257" width="60" height="16" rx="3" fill="#EA4335" opacity="0.35"/>
+  <text x="150" y="269" font-size="9" fill="#EA4335">0.20</text>
+
+  <!-- Top-2 selected -->
+  <text x="55" y="300" font-size="10" fill="#C5221F" font-weight="600">Top-2 选中：E1, E2 (永远是这两个)</text>
+
+  <!-- Load distribution -->
+  <rect x="55" y="315" width="340" height="75" rx="6" fill="white" stroke="#EA4335" stroke-width="1"/>
+  <text x="225" y="335" text-anchor="middle" font-size="10" font-weight="600" fill="#C5221F">负载分布 F</text>
+  <rect x="70" y="345" width="120" height="12" rx="2" fill="#EA4335" opacity="0.7"/>
+  <rect x="70" y="361" width="110" height="12" rx="2" fill="#EA4335" opacity="0.6"/>
+  <rect x="70" y="377" width="20" height="8" rx="2" fill="#E8EAED"/>
+  <text x="200" y="356" font-size="9" fill="#C5221F">E1, E2 严重过载</text>
+  <text x="200" y="372" font-size="9" fill="#C5221F">E5, E6 接近 Dead</text>
+
+  <!-- Right: With bias -->
+  <rect x="440" y="65" width="390" height="340" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="635" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">Loss-Free：argtop_k(ρ + b)</text>
+  <text x="635" y="108" text-anchor="middle" font-size="10" fill="#0D652D">b 抬高冷门 expert、压低热门 expert → 均衡</text>
+
+  <!-- Score bars with bias -->
+  <text x="465" y="135" font-size="10" fill="#5F6368" font-weight="600">ρ + b（排序用）：</text>
+
+  <text x="465" y="158" font-size="9" fill="#3C4043">E1</text>
+  <rect x="490" y="147" width="160" height="16" rx="3" fill="#1A73E8" opacity="0.55"/>
+  <rect x="650" y="147" width="0" height="16" rx="3"/>
+  <text x="660" y="159" font-size="8" fill="#EA4335">b₁ = -0.35</text>
+  <text x="730" y="159" font-size="9" fill="#5F6368">= 0.57</text>
+
+  <text x="465" y="180" font-size="9" fill="#3C4043">E2</text>
+  <rect x="490" y="169" width="150" height="16" rx="3" fill="#1A73E8" opacity="0.5"/>
+  <text x="660" y="181" font-size="8" fill="#EA4335">b₂ = -0.30</text>
+  <text x="730" y="181" font-size="9" fill="#5F6368">= 0.55</text>
+
+  <text x="465" y="202" font-size="9" fill="#3C4043">E3</text>
+  <rect x="490" y="191" width="180" height="16" rx="3" fill="#34A853" opacity="0.5"/>
+  <text x="660" y="203" font-size="8" fill="#34A853">b₃ = -0.02</text>
+  <text x="730" y="203" font-size="9" fill="#137333" font-weight="600">= 0.64 ★</text>
+
+  <text x="465" y="224" font-size="9" fill="#3C4043">E4</text>
+  <rect x="490" y="213" width="175" height="16" rx="3" fill="#34A853" opacity="0.5"/>
+  <text x="660" y="225" font-size="8" fill="#34A853">b₄ = +0.05</text>
+  <text x="730" y="225" font-size="9" fill="#137333" font-weight="600">= 0.61 ★</text>
+
+  <text x="465" y="246" font-size="9" fill="#3C4043">E5</text>
+  <rect x="490" y="235" width="140" height="16" rx="3" fill="#34A853" opacity="0.4"/>
+  <text x="660" y="247" font-size="8" fill="#34A853">b₅ = +0.18</text>
+  <text x="730" y="247" font-size="9" fill="#5F6368">= 0.48</text>
+
+  <text x="465" y="268" font-size="9" fill="#3C4043">E6</text>
+  <rect x="490" y="257" width="130" height="16" rx="3" fill="#34A853" opacity="0.35"/>
+  <text x="660" y="269" font-size="8" fill="#34A853">b₆ = +0.25</text>
+  <text x="730" y="269" font-size="9" fill="#5F6368">= 0.45</text>
+
+  <!-- Top-2 selected - different now -->
+  <text x="465" y="300" font-size="10" fill="#137333" font-weight="600">Top-2 选中：E3, E4（轮换均衡）</text>
+
+  <!-- Load distribution -->
+  <rect x="465" y="315" width="340" height="75" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="335" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">负载分布 F ≈ Q</text>
+  <rect x="480" y="345" width="55" height="12" rx="2" fill="#34A853" opacity="0.5"/>
+  <rect x="480" y="361" width="55" height="12" rx="2" fill="#34A853" opacity="0.5"/>
+  <rect x="480" y="377" width="55" height="8" rx="2" fill="#34A853" opacity="0.5"/>
+  <rect x="545" y="345" width="55" height="12" rx="2" fill="#34A853" opacity="0.5"/>
+  <rect x="545" y="361" width="55" height="12" rx="2" fill="#34A853" opacity="0.5"/>
+  <rect x="545" y="377" width="55" height="8" rx="2" fill="#34A853" opacity="0.5"/>
+  <text x="680" y="356" font-size="9" fill="#137333">所有 expert 负载均匀</text>
+  <text x="680" y="372" font-size="9" fill="#137333">b 只参与排序，不参与计算</text>
+
+  <!-- Bottom key insight -->
+  <rect x="130" y="408" width="600" height="6" rx="3" fill="#F9AB00" opacity="0.3"/>
+</svg>

@@ -14,7 +14,7 @@
 |---|------|------|----------|----------|
 | 1 | [从几何意义出发](https://kexue.fm/archives/10699) | 2025-02-08 | 从 Dense 模型的最佳逼近推导 MoE | [01-geometric-interpretation.md](01-geometric-interpretation.md) |
 | 2 | [不患寡而患不均](https://kexue.fm/archives/10735) | 2025-02 | Aux Loss 与负载均衡的 STE 推导 | [02-aux-loss.md](02-aux-loss.md) |
-| 3 | [换个思路来分配](https://kexue.fm/archives/10757) | 2025-03-05 | DeepSeek Loss-Free 方案解读 | 待写 |
+| 3 | [换个思路来分配](https://kexue.fm/archives/10757) | 2025-03-05 | DeepSeek Loss-Free 方案解读 | [03-loss-free.md](03-loss-free.md) |
 | 4 | [难处应当多投入](https://kexue.fm/archives/10815) | 2025-03-28 | 动态激活：难 token 多分配资源 | 待写 |
 | 5 | [均匀分布的反思](https://kexue.fm/archives/10945) | 2025-05-16 | Shared Expert 与 Fine-Grained Expert | 待写 |
 | 6 | [最优分配促均衡](https://kexue.fm/archives/11619) | 2026-02-22 | **Quantile Balancing 提出** | 待写 |

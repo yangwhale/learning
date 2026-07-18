@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+
+  <rect width="860" height="480" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">b 的更新规则：从 STE 推导到三种变体</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">核心洞察：b 本身就是 F 的光滑近似 → 可直接做 STE 替换</text>
+
+  <!-- Step 1: Aux Loss for b -->
+  <rect x="40" y="65" width="780" height="75" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="430" y="88" text-anchor="middle" font-size="12" font-weight="700" fill="#1A73E8">从 Aux Loss 出发：优化 b 使负载趋于均匀</text>
+  <text x="430" y="110" text-anchor="middle" font-size="11" fill="#1967D2">L_aux = (1/2) ‖F - Q‖² = (1/2) Σ (F_i - 1/n)²</text>
+  <text x="430" y="128" text-anchor="middle" font-size="10" fill="#5F6368">F 不可导（由 argtop_k 产生），但 b 恰好满足 STE 条件：增大 b_i → F_i 增大</text>
+
+  <!-- Arrow -->
+  <line x1="430" y1="145" x2="430" y2="170" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr3)"/>
+  <text x="440" y="163" font-size="10" fill="#5F6368" font-weight="600">STE: F → b + sg[F - b]</text>
+
+  <!-- Step 2: STE result -->
+  <rect x="40" y="175" width="780" height="55" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="430" y="198" text-anchor="middle" font-size="12" font-weight="700" fill="#137333">STE 替换后的梯度</text>
+  <text x="430" y="218" text-anchor="middle" font-size="11" fill="#0D652D">∇_b L_aux = F - Q     （梯度非常简洁！）</text>
+
+  <!-- Arrow -->
+  <line x1="430" y1="235" x2="430" y2="255" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr3)"/>
+
+  <!-- Three variants -->
+  <text x="430" y="272" text-anchor="middle" font-size="12" font-weight="700" fill="#202124">三种更新规则</text>
+
+  <!-- Variant 1: SGD -->
+  <rect x="30" y="285" width="250" height="180" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="155" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#1A73E8">SGD (标准梯度下降)</text>
+
+  <rect x="45" y="320" width="220" height="30" rx="4" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="155" y="340" text-anchor="middle" font-size="11" fill="#1967D2" font-weight="600">b ← b - γ(F - Q)</text>
+
+  <text x="55" y="370" font-size="10" fill="#5F6368">更新幅度 ∝ |F_i - Q_i|</text>
+  <text x="55" y="388" font-size="10" fill="#5F6368">远离均衡的改多，接近的改少</text>
+  <text x="55" y="410" font-size="10" fill="#34A853" font-weight="600">理论最直接</text>
+  <text x="55" y="428" font-size="10" fill="#EA4335">但没有归一化 → 尺度不稳定</text>
+  <text x="55" y="450" font-size="10" fill="#5F6368">不在原论文中</text>
+
+  <!-- Variant 2: SignSGD -->
+  <rect x="305" y="285" width="250" height="180" rx="8" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1.5"/>
+  <text x="430" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#E37400">SignSGD (符号梯度下降)</text>
+
+  <rect x="320" y="320" width="220" height="30" rx="4" fill="white" stroke="#F9AB00" stroke-width="1"/>
+  <text x="430" y="340" text-anchor="middle" font-size="11" fill="#B06000" font-weight="600">b ← b - γ sign(F - Q)</text>
+
+  <text x="315" y="370" font-size="10" fill="#5F6368">更新幅度恒定 = γ</text>
+  <text x="315" y="388" font-size="10" fill="#5F6368">不论远近都同样更新</text>
+  <text x="315" y="410" font-size="10" fill="#34A853" font-weight="600">DeepSeek 原论文方案</text>
+  <text x="315" y="428" font-size="10" fill="#EA4335">易震荡：已均衡的维度被过度纠正</text>
+  <text x="315" y="450" font-size="10" fill="#5F6368">γ = 0.001 (Sigmoid 下)</text>
+
+  <!-- Variant 3: RMS Norm SGD -->
+  <rect x="580" y="285" width="250" height="180" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="2"/>
+  <text x="705" y="310" text-anchor="middle" font-size="12" font-weight="700" fill="#137333">RMS Norm SGD (苏剑林改良)</text>
+
+  <rect x="595" y="320" width="220" height="30" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="705" y="340" text-anchor="middle" font-size="11" fill="#0D652D" font-weight="600">b ← b - γ (F-Q)/RMS(F-Q)</text>
+
+  <text x="590" y="370" font-size="10" fill="#5F6368">保留 F_i - Q_i 的相对大小</text>
+  <text x="590" y="388" font-size="10" fill="#5F6368">整体尺度归一化到 RMS=1</text>
+  <text x="590" y="410" font-size="10" fill="#34A853" font-weight="600">苏剑林推荐 · 实测效果最优</text>
+  <text x="590" y="428" font-size="10" fill="#34A853">自适应 + 同 γ 可复用</text>
+  <text x="590" y="450" font-size="10" fill="#5F6368">sign 和 RMS Norm 版 RMS 都 = 1</text>
+</svg>
