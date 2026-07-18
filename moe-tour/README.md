@@ -17,7 +17,7 @@
 | 3 | [换个思路来分配](https://kexue.fm/archives/10757) | 2025-03-05 | DeepSeek Loss-Free 方案解读 | [03-loss-free.md](03-loss-free.md) |
 | 4 | [难处应当多投入](https://kexue.fm/archives/10815) | 2025-03-28 | 动态激活：难 token 多分配资源 | [04-dynamic-activation.md](04-dynamic-activation.md) |
 | 5 | [均匀分布的反思](https://kexue.fm/archives/10945) | 2025-05-16 | Shared Expert 与 Fine-Grained Expert | [05-rethinking-uniform.md](05-rethinking-uniform.md) |
-| 6 | [最优分配促均衡](https://kexue.fm/archives/11619) | 2026-02-22 | **Quantile Balancing 提出** | 待写 |
+| 6 | [最优分配促均衡](https://kexue.fm/archives/11619) | 2026-02-22 | **Quantile Balancing 提出** | [06-quantile-balancing.md](06-quantile-balancing.md) |
 | 7 | [动态激活极简解](https://kexue.fm/archives/11626) | 2026-02-23 | QB 动态版：一步 quantile 求解 | 待写 |
 | 番外 | [DeepSeek V4 的 tid2eid](https://kexue.fm/archives/11750) | 2026-05-15 | Hash Routing 映射表生成 | 待写 |
 | 8 | [强制序列级均衡](https://kexue.fm/archives/11760) | 2026-05-22 | 从全局均衡到序列级均衡 | 待写 |

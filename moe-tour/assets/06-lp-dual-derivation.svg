@@ -1,0 +1,99 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr6b" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+    <marker id="arr6bg" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#34A853"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Quantile Balancing 推导：从线性规划到分位数</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">四步将整数规划 → 松弛 → 对偶 → 分位数闭合解</text>
+
+  <!-- Step 1: Integer Programming -->
+  <rect x="30" y="65" width="390" height="125" rx="8" fill="white" stroke="#1A73E8" stroke-width="2"/>
+  <rect x="30" y="65" width="390" height="28" rx="8" fill="#1A73E8"/>
+  <rect x="30" y="80" width="390" height="13" fill="#1A73E8"/>
+  <text x="225" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="white">Step 1: 整数规划建模</text>
+
+  <text x="50" y="115" font-size="10" fill="#3C4043">m 个 token, n 个 expert, 每 token 选 k 个：</text>
+  <rect x="50" y="123" width="350" height="20" rx="3" fill="#E8F0FE"/>
+  <text x="225" y="138" text-anchor="middle" font-size="10" fill="#1A73E8" font-weight="600">max Σ s_{i,j} · x_{i,j}</text>
+  <text x="50" y="160" font-size="9" fill="#5F6368">约束：Σ_j x_{i,j} = k（每 token 选 k 个）</text>
+  <text x="50" y="175" font-size="9" fill="#5F6368">      Σ_i x_{i,j} = mk/n（每 expert 均摊）, x ∈ {0,1}</text>
+
+  <!-- Arrow down -->
+  <line x1="225" y1="190" x2="225" y2="210" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr6b)"/>
+  <text x="240" y="205" font-size="9" fill="#EA4335" font-weight="600">松弛 {0,1}→[0,1]</text>
+
+  <!-- Step 2: LP Relaxation + Lagrangian -->
+  <rect x="30" y="215" width="390" height="130" rx="8" fill="white" stroke="#F9AB00" stroke-width="2"/>
+  <rect x="30" y="215" width="390" height="28" rx="8" fill="#F9AB00"/>
+  <rect x="30" y="230" width="390" height="13" fill="#F9AB00"/>
+  <text x="225" y="234" text-anchor="middle" font-size="11" font-weight="700" fill="white">Step 2: Lagrangian 对偶</text>
+
+  <text x="50" y="262" font-size="10" fill="#3C4043">引入乘子 α_i (token), β_j (expert)：</text>
+  <rect x="50" y="270" width="350" height="20" rx="3" fill="#FEF7E0"/>
+  <text x="225" y="285" text-anchor="middle" font-size="10" fill="#E37400" font-weight="600">L = Σ (s_{i,j} - α_i - β_j) · x_{i,j} + const</text>
+  <text x="50" y="310" font-size="9" fill="#5F6368">内层 max: x*_{i,j} = 1 if s_{i,j} - α_i - β_j > 0</text>
+  <text x="50" y="325" font-size="9" fill="#5F6368">                 x*_{i,j} = 0 otherwise</text>
+  <text x="50" y="340" font-size="9" fill="#137333" font-weight="600">关键洞察：松弛解自动为 0/1 ⟹ 与整数规划等价！</text>
+
+  <!-- Arrow down -->
+  <line x1="225" y1="345" x2="225" y2="365" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr6b)"/>
+  <text x="240" y="360" font-size="9" fill="#EA4335" font-weight="600">Minimax 定理交换</text>
+
+  <!-- Step 3: Alternating Optimization -->
+  <rect x="30" y="370" width="390" height="140" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="30" y="370" width="390" height="28" rx="8" fill="#34A853"/>
+  <rect x="30" y="385" width="390" height="13" fill="#34A853"/>
+  <text x="225" y="389" text-anchor="middle" font-size="11" font-weight="700" fill="white">Step 3: 交替优化 → 分位数</text>
+
+  <text x="50" y="420" font-size="10" fill="#3C4043">固定 β, 求 α（每 token 恰好选 k 个）：</text>
+  <rect x="50" y="428" width="350" height="18" rx="3" fill="#E6F4EA"/>
+  <text x="225" y="442" text-anchor="middle" font-size="10" fill="#137333" font-weight="600">α_i = {s_{i,j} - β_j} 中第 (k+1) 大值</text>
+
+  <text x="50" y="465" font-size="10" fill="#3C4043">固定 α, 求 β（每 expert 恰好处理 mk/n 个）：</text>
+  <rect x="50" y="473" width="350" height="18" rx="3" fill="#E6F4EA"/>
+  <text x="225" y="487" text-anchor="middle" font-size="10" fill="#137333" font-weight="600">β_j = {s_{i,j} - α_i} 中第 (mk/n+1) 大值</text>
+
+  <text x="50" y="505" font-size="9" fill="#1A73E8" font-weight="600">两步都是取"1 - k/n 分位数" → 命名 Quantile Balancing</text>
+
+  <!-- Right: Key Insight Box -->
+  <rect x="440" y="65" width="390" height="190" rx="8" fill="white" stroke="#AB47BC" stroke-width="2"/>
+  <rect x="440" y="65" width="390" height="28" rx="8" fill="#AB47BC"/>
+  <rect x="440" y="80" width="390" height="13" fill="#AB47BC"/>
+  <text x="635" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="white">核心洞察：为什么松弛 = 整数？</text>
+
+  <text x="460" y="115" font-size="10" fill="#3C4043">线性规划可行域是凸多面体。</text>
+  <text x="460" y="135" font-size="10" fill="#3C4043">目标函数在 x 上线性 → 最优解在顶点。</text>
+  <text x="460" y="155" font-size="10" fill="#3C4043">约束矩阵是全幺模矩阵 (TUM)：</text>
+  <text x="460" y="175" font-size="10" fill="#3C4043">所有顶点的坐标恰好是 0 或 1。</text>
+
+  <rect x="460" y="190" width="350" height="50" rx="6" fill="#F3E8FD" stroke="#AB47BC" stroke-width="1"/>
+  <text x="635" y="210" text-anchor="middle" font-size="10" font-weight="600" fill="#7B1FA2">结论：[0,1] 松弛不损失任何信息</text>
+  <text x="635" y="228" text-anchor="middle" font-size="9" fill="#7B1FA2">→ 可以放心用连续优化方法解整数问题</text>
+
+  <!-- Right: Practical Algorithm -->
+  <rect x="440" y="270" width="390" height="240" rx="8" fill="white" stroke="#1A73E8" stroke-width="2"/>
+  <rect x="440" y="270" width="390" height="28" rx="8" fill="#1A73E8"/>
+  <rect x="440" y="285" width="390" height="13" fill="#1A73E8"/>
+  <text x="635" y="289" text-anchor="middle" font-size="11" font-weight="700" fill="white">实际训练中的简化</text>
+
+  <text x="460" y="320" font-size="10" font-weight="600" fill="#1A73E8">1. 只维护 β（大小 n，固定）</text>
+  <text x="460" y="340" font-size="9" fill="#5F6368">   α 是中间变量（大小 m，随 batch 变化）</text>
+
+  <text x="460" y="365" font-size="10" font-weight="600" fill="#1A73E8">2. 每步只迭代一次（不收敛到最优）</text>
+  <text x="460" y="385" font-size="9" fill="#5F6368">   避免过拟合当前 batch, 跟 SGD 精神一致</text>
+
+  <text x="460" y="410" font-size="10" font-weight="600" fill="#EA4335">3. 顺序很关键！</text>
+  <rect x="460" y="420" width="350" height="35" rx="4" fill="#FCE8E6" stroke="#EA4335" stroke-width="1"/>
+  <text x="635" y="436" text-anchor="middle" font-size="9" fill="#C5221F">先用旧 β 选 expert → 再更新 β</text>
+  <text x="635" y="450" text-anchor="middle" font-size="9" fill="#C5221F">反过来 = 信息泄露 → 训练不稳定</text>
+
+  <text x="460" y="475" font-size="10" font-weight="600" fill="#1A73E8">4. 推理只需 β（丢掉 α）</text>
+  <text x="460" y="495" font-size="9" fill="#5F6368">   β 是 n 维向量, 参数量可忽略</text>
+</svg>

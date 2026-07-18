@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 400" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr6a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="400" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">三代负载均衡方案演进</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">从"罚不均"到"调排序"到"最优分配"：越来越精确、越来越少超参数</text>
+
+  <!-- Gen 1: Aux Loss -->
+  <rect x="30" y="65" width="250" height="300" rx="8" fill="white" stroke="#EA4335" stroke-width="2"/>
+  <rect x="30" y="65" width="250" height="35" rx="8" fill="#EA4335"/>
+  <rect x="30" y="85" width="250" height="15" fill="#EA4335"/>
+  <text x="155" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="white">第一代：Aux Loss</text>
+  <text x="155" y="118" text-anchor="middle" font-size="10" fill="#5F6368">GShard (Google, 2020)</text>
+
+  <text x="50" y="145" font-size="10" font-weight="600" fill="#C5221F">核心思路</text>
+  <text x="50" y="162" font-size="10" fill="#3C4043">在主 Loss 旁加罚项：</text>
+  <rect x="50" y="170" width="210" height="24" rx="4" fill="#FCE8E6" stroke="#EA4335" stroke-width="1"/>
+  <text x="155" y="187" text-anchor="middle" font-size="10" fill="#C5221F">L = L_main + α · L_balance</text>
+
+  <text x="50" y="215" font-size="10" font-weight="600" fill="#C5221F">问题</text>
+  <text x="50" y="232" font-size="9" fill="#5F6368">1. 惩罚系数 α 难调（过大扰主 Loss）</text>
+  <text x="50" y="248" font-size="9" fill="#5F6368">2. STE 次优梯度（不可导操作）</text>
+  <text x="50" y="264" font-size="9" fill="#5F6368">3. 均衡速度慢</text>
+
+  <rect x="50" y="280" width="210" height="20" rx="4" fill="#EA4335" opacity="0.1"/>
+  <text x="155" y="294" text-anchor="middle" font-size="9" font-weight="600" fill="#C5221F">超参数：α（惩罚系数）</text>
+
+  <rect x="50" y="310" width="210" height="40" rx="4" fill="#FCE8E6"/>
+  <text x="155" y="328" text-anchor="middle" font-size="9" fill="#A50E0E">采用者：几乎所有早期 MoE</text>
+  <text x="155" y="344" text-anchor="middle" font-size="9" fill="#A50E0E">（GShard, Switch, ST-MoE...）</text>
+
+  <!-- Arrow 1→2 -->
+  <line x1="280" y1="215" x2="305" y2="215" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr6a)"/>
+
+  <!-- Gen 2: Loss-Free -->
+  <rect x="305" y="65" width="250" height="300" rx="8" fill="white" stroke="#F9AB00" stroke-width="2"/>
+  <rect x="305" y="65" width="250" height="35" rx="8" fill="#F9AB00"/>
+  <rect x="305" y="85" width="250" height="15" fill="#F9AB00"/>
+  <text x="430" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="white">第二代：Loss-Free</text>
+  <text x="430" y="118" text-anchor="middle" font-size="10" fill="#5F6368">DeepSeek (2024)</text>
+
+  <text x="325" y="145" font-size="10" font-weight="600" fill="#E37400">核心思路</text>
+  <text x="325" y="162" font-size="10" fill="#3C4043">不改打分，加 bias 调排序：</text>
+  <rect x="325" y="170" width="210" height="24" rx="4" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="430" y="187" text-anchor="middle" font-size="10" fill="#E37400">argtop_k(ρ + b)</text>
+
+  <text x="325" y="215" font-size="10" font-weight="600" fill="#E37400">改进</text>
+  <text x="325" y="232" font-size="9" fill="#5F6368">1. 不干扰主 Loss 梯度 ✓</text>
+  <text x="325" y="248" font-size="9" fill="#5F6368">2. 无 STE ✓</text>
+  <text x="325" y="264" font-size="9" fill="#EA4335">3. γ 与激活函数耦合（换函数需重调）</text>
+
+  <rect x="325" y="280" width="210" height="20" rx="4" fill="#F9AB00" opacity="0.1"/>
+  <text x="430" y="294" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">超参数：γ（bias 学习率）</text>
+
+  <rect x="325" y="310" width="210" height="40" rx="4" fill="#FEF7E0"/>
+  <text x="430" y="328" text-anchor="middle" font-size="9" fill="#B06000">采用者：DeepSeek V3, Kimi K2</text>
+  <text x="430" y="344" text-anchor="middle" font-size="9" fill="#B06000">ALModel 17B</text>
+
+  <!-- Arrow 2→3 -->
+  <line x1="555" y1="215" x2="580" y2="215" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr6a)"/>
+
+  <!-- Gen 3: Quantile Balancing -->
+  <rect x="580" y="65" width="250" height="300" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="580" y="65" width="250" height="35" rx="8" fill="#34A853"/>
+  <rect x="580" y="85" width="250" height="15" fill="#34A853"/>
+  <text x="705" y="88" text-anchor="middle" font-size="13" font-weight="700" fill="white">第三代：Quantile Balancing</text>
+  <text x="705" y="118" text-anchor="middle" font-size="10" fill="#5F6368">苏剑林 / Moonshot (2026)</text>
+
+  <text x="600" y="145" font-size="10" font-weight="600" fill="#137333">核心思路</text>
+  <text x="600" y="162" font-size="10" fill="#3C4043">线性规划对偶 → 分位数求解：</text>
+  <rect x="600" y="170" width="210" height="24" rx="4" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="705" y="187" text-anchor="middle" font-size="10" fill="#137333">β = quantile(s-α, 1-k/n)</text>
+
+  <text x="600" y="215" font-size="10" font-weight="600" fill="#137333">全面超越</text>
+  <text x="600" y="232" font-size="9" fill="#137333">1. 不干扰主 Loss ✓</text>
+  <text x="600" y="248" font-size="9" fill="#137333">2. 无超参数 ✓</text>
+  <text x="600" y="264" font-size="9" fill="#137333">3. 任意激活函数均适用 ✓</text>
+
+  <rect x="600" y="280" width="210" height="20" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="705" y="294" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">超参数：无</text>
+
+  <rect x="600" y="310" width="210" height="40" rx="4" fill="#E6F4EA"/>
+  <text x="705" y="328" text-anchor="middle" font-size="9" fill="#0D652D">采用者：Kimi K3 (2.8T)</text>
+  <text x="705" y="344" text-anchor="middle" font-size="9" fill="#0D652D">精确均衡 → 零 padding → 零 dropping</text>
+
+  <!-- Bottom evolution line -->
+  <rect x="130" y="378" width="600" height="14" rx="4" fill="#E8F0FE"/>
+  <text x="430" y="390" text-anchor="middle" font-size="10" fill="#1A73E8">演进方向：侵入性 ↓ · 超参数 ↓ · 均衡精度 ↑ · 硬件友好度 ↑</text>
+</svg>

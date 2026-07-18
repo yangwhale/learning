@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arr6c" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">QB 与 Loss-Free 的梯度等价性</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">从 QB 的 β 梯度出发 → SignSGD = Loss-Free 更新规则 → 两者本质统一</text>
+
+  <!-- Left: QB gradient derivation -->
+  <rect x="30" y="65" width="390" height="360" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="30" y="65" width="390" height="28" rx="8" fill="#34A853"/>
+  <rect x="30" y="80" width="390" height="13" fill="#34A853"/>
+  <text x="225" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="white">Quantile Balancing 梯度视角</text>
+
+  <text x="50" y="115" font-size="10" font-weight="600" fill="#137333">目标函数（对偶问题的外层 min）</text>
+  <rect x="50" y="122" width="350" height="20" rx="3" fill="#E6F4EA"/>
+  <text x="225" y="137" text-anchor="middle" font-size="10" fill="#137333">ℓ(α,β) = Σ_{i,j} max(0, s_{i,j} - α_i - β_j) + const</text>
+
+  <text x="50" y="165" font-size="10" font-weight="600" fill="#137333">对 β_j 求导</text>
+  <rect x="50" y="172" width="350" height="22" rx="3" fill="#E6F4EA"/>
+  <text x="225" y="188" text-anchor="middle" font-size="10" fill="#137333">∂ℓ/∂β_j = mk/n − Σ_i χ(s_{i,j} − α_i − β_j > 0)</text>
+
+  <text x="50" y="212" font-size="9" fill="#5F6368">= (目标分配量) − (实际分配量)</text>
+
+  <text x="50" y="240" font-size="10" font-weight="600" fill="#137333">如果用 SignSGD（只看符号）</text>
+  <rect x="50" y="248" width="350" height="40" rx="4" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="225" y="265" text-anchor="middle" font-size="10" fill="#137333">β_j ← β_j − γ · sign(∂ℓ/∂β_j)</text>
+  <text x="225" y="282" text-anchor="middle" font-size="9" fill="#137333">分配过多 → sign > 0 → β 减小 → 吸引力下降</text>
+
+  <text x="50" y="310" font-size="10" font-weight="600" fill="#137333">如果用 GD（保留幅度）</text>
+  <rect x="50" y="318" width="350" height="22" rx="3" fill="#E6F4EA"/>
+  <text x="225" y="334" text-anchor="middle" font-size="10" fill="#137333">β_j ← β_j − γ · (mk/n − count_j)</text>
+
+  <text x="50" y="360" font-size="9" fill="#5F6368">GD 步长 ∝ 偏差大小，收敛更快；</text>
+  <text x="50" y="375" font-size="9" fill="#5F6368">SignSGD 步长恒定 γ，符号决定方向。</text>
+
+  <rect x="50" y="390" width="350" height="25" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="225" y="407" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">QB 精确解 = GD 在 γ→∞ 时的极限</text>
+
+  <!-- Arrow connecting -->
+  <text x="430" y="260" text-anchor="middle" font-size="24" fill="#5F6368">⇌</text>
+  <text x="430" y="280" text-anchor="middle" font-size="9" fill="#5F6368">等价</text>
+
+  <!-- Right: Loss-Free update -->
+  <rect x="440" y="65" width="390" height="210" rx="8" fill="white" stroke="#F9AB00" stroke-width="2"/>
+  <rect x="440" y="65" width="390" height="28" rx="8" fill="#F9AB00"/>
+  <rect x="440" y="80" width="390" height="13" fill="#F9AB00"/>
+  <text x="635" y="84" text-anchor="middle" font-size="11" font-weight="700" fill="white">Loss-Free 更新规则</text>
+
+  <text x="460" y="115" font-size="10" font-weight="600" fill="#E37400">更新公式</text>
+  <rect x="460" y="122" width="350" height="22" rx="3" fill="#FEF7E0"/>
+  <text x="635" y="138" text-anchor="middle" font-size="10" fill="#E37400">b_j ← b_j − γ · sign(count_j − target_j)</text>
+
+  <text x="460" y="165" font-size="10" fill="#3C4043">展开：</text>
+  <text x="460" y="185" font-size="9" fill="#5F6368">count_j > target → sign = +1 → b 减小</text>
+  <text x="460" y="200" font-size="9" fill="#5F6368">count_j = target → sign = 0 → b 不变</text>
+  <text x="460" y="215" font-size="9" fill="#5F6368">count_j &lt; target → sign = −1 → b 增大</text>
+
+  <text x="460" y="242" font-size="9" fill="#E37400" font-weight="600">恰好是 QB 梯度的 SignSGD！</text>
+  <text x="460" y="262" font-size="9" fill="#5F6368">Loss-Free 的 b = QB 的 β, 只是求解精度不同</text>
+
+  <!-- Right bottom: BIP comparison -->
+  <rect x="440" y="290" width="390" height="135" rx="8" fill="white" stroke="#EA4335" stroke-width="2"/>
+  <rect x="440" y="290" width="390" height="28" rx="8" fill="#EA4335"/>
+  <rect x="440" y="305" width="390" height="13" fill="#EA4335"/>
+  <text x="635" y="309" text-anchor="middle" font-size="11" font-weight="700" fill="white">BIP（不等式约束）为什么更差？</text>
+
+  <text x="460" y="340" font-size="10" fill="#3C4043">BIP 用不等式约束 ≤ 代替等式 =：</text>
+  <text x="460" y="360" font-size="9" fill="#5F6368">Lagrange 乘子要求 α,β ≥ 0 → max(0,·) 截断</text>
+  <text x="460" y="380" font-size="9" fill="#5F6368">截断效应 = "劫富可以，济贫不行"</text>
+
+  <rect x="460" y="390" width="350" height="25" rx="4" fill="#FCE8E6"/>
+  <text x="635" y="407" text-anchor="middle" font-size="9" fill="#C5221F">过载 expert 可以被惩罚，但欠载 expert 无法被奖励</text>
+
+  <!-- Bottom summary -->
+  <rect x="130" y="435" width="600" height="3" rx="1.5" fill="#34A853"/>
+</svg>
