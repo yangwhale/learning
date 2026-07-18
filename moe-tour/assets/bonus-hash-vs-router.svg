@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arrBa" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="440" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Router Routing vs Hash Routing：两种完全不同的路由哲学</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">"看内容选专家" vs "看 Token ID 查表"——前几层 MoE 上下文弱，查表可能就够了</text>
+
+  <!-- Left: Router-based -->
+  <rect x="30" y="65" width="390" height="360" rx="8" fill="white" stroke="#1A73E8" stroke-width="2"/>
+  <rect x="30" y="65" width="390" height="28" rx="8" fill="#1A73E8"/>
+  <rect x="30" y="80" width="390" height="13" fill="#1A73E8"/>
+  <text x="225" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Router Routing（学习型路由）</text>
+
+  <text x="50" y="118" font-size="10" font-weight="600" fill="#1A73E8">工作原理</text>
+
+  <!-- Input -->
+  <rect x="50" y="130" width="120" height="30" rx="4" fill="#E8F0FE" stroke="#1A73E8"/>
+  <text x="110" y="150" text-anchor="middle" font-size="9" fill="#1967D2">Token Embedding x</text>
+
+  <line x1="170" y1="145" x2="195" y2="145" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBa)"/>
+
+  <!-- Router -->
+  <rect x="195" y="128" width="85" height="34" rx="4" fill="#FBBC04" opacity="0.3" stroke="#F9AB00"/>
+  <text x="238" y="147" text-anchor="middle" font-size="9" fill="#E37400">Router(Wx)</text>
+  <text x="238" y="158" text-anchor="middle" font-size="8" fill="#E37400">可学习参数</text>
+
+  <line x1="280" y1="145" x2="305" y2="145" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBa)"/>
+
+  <!-- Scores -->
+  <rect x="305" y="128" width="95" height="34" rx="4" fill="#E8F0FE" stroke="#1A73E8"/>
+  <text x="352" y="150" text-anchor="middle" font-size="9" fill="#1967D2">Scores s ∈ R^n</text>
+
+  <!-- Below: routing decision -->
+  <text x="50" y="185" font-size="10" font-weight="600" fill="#1A73E8">路由决策（运行时计算）</text>
+  <rect x="50" y="195" width="350" height="60" rx="6" fill="#E8F0FE"/>
+  <text x="225" y="215" text-anchor="middle" font-size="9" fill="#1967D2">Top-K: argtop_k(s) → 选 k 个打分最高的 expert</text>
+  <text x="225" y="232" text-anchor="middle" font-size="9" fill="#1967D2">QB: s - β > 0 → 选打分超过阈值的 expert</text>
+  <text x="225" y="249" text-anchor="middle" font-size="9" fill="#1967D2">Loss-Free: argtop_k(s + bias) → 加偏置后选 top-k</text>
+
+  <text x="50" y="280" font-size="10" font-weight="600" fill="#137333">优点</text>
+  <text x="50" y="297" font-size="9" fill="#5F6368">- 根据上下文语义精确路由（每个 token 内容决定去哪）</text>
+  <text x="50" y="312" font-size="9" fill="#5F6368">- 深层 MoE 的核心——越深的层上下文越丰富</text>
+
+  <text x="50" y="335" font-size="10" font-weight="600" fill="#EA4335">缺点</text>
+  <text x="50" y="352" font-size="9" fill="#5F6368">- Router 本身有参数 + 计算开销（矩阵乘法）</text>
+  <text x="50" y="367" font-size="9" fill="#5F6368">- 前几层 embedding 信息弱 → 路由近似随机</text>
+  <text x="50" y="382" font-size="9" fill="#5F6368">- 前几层负载均衡特别困难（热门 token 扎堆）</text>
+
+  <rect x="50" y="395" width="350" height="20" rx="4" fill="#1A73E8" opacity="0.1"/>
+  <text x="225" y="409" text-anchor="middle" font-size="9" font-weight="600" fill="#1967D2">适用：深层 MoE（上下文丰富，路由有意义）</text>
+
+  <!-- Right: Hash-based -->
+  <rect x="440" y="65" width="390" height="360" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="440" y="65" width="390" height="28" rx="8" fill="#34A853"/>
+  <rect x="440" y="80" width="390" height="13" fill="#34A853"/>
+  <text x="635" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Hash Routing（查表型路由）</text>
+
+  <text x="460" y="118" font-size="10" font-weight="600" fill="#137333">工作原理</text>
+
+  <!-- Input -->
+  <rect x="460" y="130" width="90" height="30" rx="4" fill="#E6F4EA" stroke="#34A853"/>
+  <text x="505" y="150" text-anchor="middle" font-size="9" fill="#137333">Token ID i</text>
+
+  <line x1="550" y1="145" x2="575" y2="145" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBa)"/>
+
+  <!-- Lookup table -->
+  <rect x="575" y="125" width="105" height="40" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="627" y="143" text-anchor="middle" font-size="9" fill="#137333">tid2eid[i]</text>
+  <text x="627" y="158" text-anchor="middle" font-size="8" fill="#137333">预计算查表</text>
+
+  <line x1="680" y1="145" x2="705" y2="145" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBa)"/>
+
+  <!-- Expert IDs -->
+  <rect x="705" y="130" width="105" height="30" rx="4" fill="#E6F4EA" stroke="#34A853"/>
+  <text x="758" y="150" text-anchor="middle" font-size="9" fill="#137333">Expert IDs</text>
+
+  <!-- Below: no computation needed -->
+  <text x="460" y="185" font-size="10" font-weight="600" fill="#137333">路由决策（编译时确定）</text>
+  <rect x="460" y="195" width="350" height="60" rx="6" fill="#E6F4EA"/>
+  <text x="635" y="215" text-anchor="middle" font-size="9" fill="#137333">1-gram: tid2eid[token_id] → k 个 expert ID</text>
+  <text x="635" y="232" text-anchor="middle" font-size="9" fill="#137333">2-gram: (a·q + b) mod n → 基于前一 token 的哈希</text>
+  <text x="635" y="249" text-anchor="middle" font-size="9" fill="#137333">无需 Router 参数 · 无需矩阵乘法 · 纯整数运算</text>
+
+  <text x="460" y="280" font-size="10" font-weight="600" fill="#137333">优点</text>
+  <text x="460" y="297" font-size="9" fill="#5F6368">- 零计算开销（查表 O(1) vs 矩阵乘 O(d×n)）</text>
+  <text x="460" y="312" font-size="9" fill="#5F6368">- 编译时完全确定 → XLA 最优形态</text>
+  <text x="460" y="327" font-size="9" fill="#5F6368">- 通过频率感知贪心保证负载均衡</text>
+
+  <text x="460" y="348" font-size="10" font-weight="600" fill="#EA4335">缺点</text>
+  <text x="460" y="365" font-size="9" fill="#5F6368">- 完全忽略上下文 → 深层不适用</text>
+  <text x="460" y="380" font-size="9" fill="#5F6368">- 极端频率 token 可能无法均衡（需 n-gram 兜底）</text>
+
+  <rect x="460" y="395" width="350" height="20" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="635" y="409" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">适用：浅层 MoE（上下文弱，查表即可）</text>
+
+  <!-- Bottom -->
+  <rect x="130" y="432" width="600" height="3" rx="1.5" fill="#AB47BC"/>
+</svg>

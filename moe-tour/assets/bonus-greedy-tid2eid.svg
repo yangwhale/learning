@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arrBb" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="520" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">贪心构造 tid2eid 映射表：频率感知的负载均衡</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">高频 token 优先分配，每步选负载最低的 k 个 expert → 保证各 expert 总频率接近 k/n</text>
+
+  <!-- Step 0: Input -->
+  <rect x="30" y="65" width="800" height="60" rx="8" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="50" y="85" font-size="11" font-weight="700" fill="#1A73E8">输入</text>
+  <text x="50" y="105" font-size="10" fill="#3C4043">词表 V = {w₁, w₂, ..., wₙ}，每个 token 频率 p_i（从训练数据统计）| n 个 expert，每 token 选 k 个</text>
+
+  <!-- Step 1: Sort by frequency -->
+  <rect x="30" y="135" width="250" height="100" rx="8" fill="white" stroke="#F9AB00" stroke-width="1.5"/>
+  <rect x="30" y="135" width="250" height="25" rx="8" fill="#F9AB00" opacity="0.2"/>
+  <rect x="30" y="147" width="250" height="13" fill="#F9AB00" opacity="0.2"/>
+  <text x="50" y="153" font-size="10" font-weight="700" fill="#E37400">Step 1：按频率降序排列</text>
+
+  <text x="50" y="180" font-size="9" fill="#3C4043">p₁ ≥ p₂ ≥ ... ≥ p_|V|</text>
+  <text x="50" y="198" font-size="9" fill="#5F6368">高频 token 优先处理</text>
+  <text x="50" y="215" font-size="9" fill="#5F6368">确保"大户"先被妥善安排</text>
+
+  <!-- Example tokens -->
+  <rect x="80" y="175" width="30" height="16" rx="2" fill="#F9AB00" opacity="0.3"/>
+  <text x="95" y="187" text-anchor="middle" font-size="7" fill="#E37400">the</text>
+  <rect x="115" y="175" width="22" height="16" rx="2" fill="#F9AB00" opacity="0.25"/>
+  <text x="126" y="187" text-anchor="middle" font-size="7" fill="#E37400">of</text>
+  <rect x="142" y="175" width="20" height="16" rx="2" fill="#F9AB00" opacity="0.2"/>
+  <text x="152" y="187" text-anchor="middle" font-size="7" fill="#E37400">is</text>
+  <rect x="167" y="175" width="15" height="16" rx="2" fill="#F9AB00" opacity="0.15"/>
+  <text x="174" y="187" text-anchor="middle" font-size="7" fill="#E37400">a</text>
+  <rect x="187" y="175" width="12" height="16" rx="2" fill="#F9AB00" opacity="0.1"/>
+  <text x="193" y="187" text-anchor="middle" font-size="7" fill="#E37400">...</text>
+
+  <line x1="280" y1="185" x2="300" y2="185" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBb)"/>
+
+  <!-- Step 2: Greedy assignment -->
+  <rect x="300" y="135" width="280" height="100" rx="8" fill="white" stroke="#34A853" stroke-width="1.5"/>
+  <rect x="300" y="135" width="280" height="25" rx="8" fill="#34A853" opacity="0.2"/>
+  <rect x="300" y="147" width="280" height="13" fill="#34A853" opacity="0.2"/>
+  <text x="320" y="153" font-size="10" font-weight="700" fill="#137333">Step 2：贪心分配</text>
+
+  <text x="320" y="178" font-size="9" fill="#3C4043">for each token i (频率从高到低):</text>
+  <text x="340" y="195" font-size="9" fill="#3C4043">load_j = Σ p_t · x_{t,j}  (expert j 已有负载)</text>
+  <text x="340" y="212" font-size="9" fill="#137333" font-weight="600">选 k 个 load 最小的 expert → tid2eid[i]</text>
+  <text x="340" y="226" font-size="9" fill="#5F6368">更新被选 expert 的 load += p_i</text>
+
+  <line x1="580" y1="185" x2="600" y2="185" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBb)"/>
+
+  <!-- Step 3: Output -->
+  <rect x="600" y="135" width="230" height="100" rx="8" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <rect x="600" y="135" width="230" height="25" rx="8" fill="#1A73E8" opacity="0.2"/>
+  <rect x="600" y="147" width="230" height="13" fill="#1A73E8" opacity="0.2"/>
+  <text x="620" y="153" font-size="10" font-weight="700" fill="#1A73E8">输出：tid2eid 表</text>
+
+  <text x="620" y="178" font-size="9" fill="#3C4043">token 0 → [expert 3, expert 7]</text>
+  <text x="620" y="195" font-size="9" fill="#3C4043">token 1 → [expert 1, expert 5]</text>
+  <text x="620" y="212" font-size="9" fill="#3C4043">token 2 → [expert 0, expert 4]</text>
+  <text x="620" y="228" font-size="9" fill="#5F6368">...  (|V| × k 的映射表)</text>
+
+  <!-- Visual Example: 4 experts, k=2 -->
+  <rect x="30" y="250" width="800" height="160" rx="8" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="50" y="273" font-size="11" font-weight="700" fill="#202124">可视化示例：4 expert, k=2, 6 tokens</text>
+
+  <!-- Expert buckets -->
+  <rect x="80" y="290" width="140" height="100" rx="6" fill="#E8F0FE" stroke="#1A73E8"/>
+  <text x="150" y="310" text-anchor="middle" font-size="9" font-weight="600" fill="#1A73E8">Expert 0</text>
+  <rect x="95" y="315" width="45" height="18" rx="3" fill="#1A73E8" opacity="0.3"/>
+  <text x="118" y="328" text-anchor="middle" font-size="7" fill="#1967D2">token 2</text>
+  <rect x="95" y="338" width="35" height="18" rx="3" fill="#1A73E8" opacity="0.2"/>
+  <text x="112" y="351" text-anchor="middle" font-size="7" fill="#1967D2">token 5</text>
+  <text x="150" y="380" text-anchor="middle" font-size="8" fill="#1967D2">load: 0.252</text>
+
+  <rect x="240" y="290" width="140" height="100" rx="6" fill="#E6F4EA" stroke="#34A853"/>
+  <text x="310" y="310" text-anchor="middle" font-size="9" font-weight="600" fill="#34A853">Expert 1</text>
+  <rect x="255" y="315" width="55" height="18" rx="3" fill="#34A853" opacity="0.3"/>
+  <text x="282" y="328" text-anchor="middle" font-size="7" fill="#137333">token 0 (高频)</text>
+  <rect x="255" y="338" width="35" height="18" rx="3" fill="#34A853" opacity="0.2"/>
+  <text x="272" y="351" text-anchor="middle" font-size="7" fill="#137333">token 4</text>
+  <text x="310" y="380" text-anchor="middle" font-size="8" fill="#137333">load: 0.250</text>
+
+  <rect x="400" y="290" width="140" height="100" rx="6" fill="#FEF7E0" stroke="#F9AB00"/>
+  <text x="470" y="310" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">Expert 2</text>
+  <rect x="415" y="315" width="55" height="18" rx="3" fill="#F9AB00" opacity="0.3"/>
+  <text x="442" y="328" text-anchor="middle" font-size="7" fill="#E37400">token 0 (高频)</text>
+  <rect x="415" y="338" width="40" height="18" rx="3" fill="#F9AB00" opacity="0.2"/>
+  <text x="435" y="351" text-anchor="middle" font-size="7" fill="#E37400">token 3</text>
+  <text x="470" y="380" text-anchor="middle" font-size="8" fill="#E37400">load: 0.249</text>
+
+  <rect x="560" y="290" width="140" height="100" rx="6" fill="#FCE8E6" stroke="#EA4335"/>
+  <text x="630" y="310" text-anchor="middle" font-size="9" font-weight="600" fill="#EA4335">Expert 3</text>
+  <rect x="575" y="315" width="45" height="18" rx="3" fill="#EA4335" opacity="0.3"/>
+  <text x="598" y="328" text-anchor="middle" font-size="7" fill="#C5221F">token 1</text>
+  <rect x="575" y="338" width="35" height="18" rx="3" fill="#EA4335" opacity="0.2"/>
+  <text x="592" y="351" text-anchor="middle" font-size="7" fill="#C5221F">token 5</text>
+  <text x="630" y="380" text-anchor="middle" font-size="8" fill="#C5221F">load: 0.249</text>
+
+  <!-- Key insight -->
+  <text x="750" y="330" text-anchor="middle" font-size="9" fill="#5F6368">负载差</text>
+  <text x="750" y="348" text-anchor="middle" font-size="14" font-weight="700" fill="#34A853">&lt;1%</text>
+
+  <!-- N-gram extension -->
+  <rect x="30" y="420" width="800" height="90" rx="8" fill="white" stroke="#AB47BC" stroke-width="1.5"/>
+  <text x="50" y="443" font-size="11" font-weight="700" fill="#7B1FA2">极端场景：N-gram Hash 兜底</text>
+
+  <text x="50" y="465" font-size="10" fill="#3C4043">问题：当 p₁ >> k/n 时（如 "the" 占 7%，但 k/n = 2/256 ≈ 0.8%），单个 token 无法均衡分配</text>
+  <text x="50" y="485" font-size="10" fill="#3C4043">解法：用 2-gram hash — expert_id = (token_a · prime + token_b) mod n</text>
+  <text x="50" y="502" font-size="9" fill="#5F6368">k 个 expert 用 k 个不同质数 → 组合爆炸使得即使高频 token 也能均衡 → 无需查表，纯算术</text>
+
+  <rect x="650" y="440" width="160" height="58" rx="6" fill="#F3E8FD" stroke="#AB47BC"/>
+  <text x="730" y="460" text-anchor="middle" font-size="9" font-weight="600" fill="#7B1FA2">TPU 友好度</text>
+  <text x="730" y="478" text-anchor="middle" font-size="8" fill="#7B1FA2">查表 = gather → XLA 原生</text>
+  <text x="730" y="493" text-anchor="middle" font-size="8" fill="#7B1FA2">hash = mod → 纯整数运算</text>
+</svg>

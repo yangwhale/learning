@@ -1,0 +1,128 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 480" font-family="Google Sans, Segoe UI, sans-serif">
+  <defs>
+    <marker id="arrBc" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+  <rect width="860" height="480" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">TPU 视角：Hash Routing 是终极静态派发</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">从 Dense (无路由) → Router (动态) → QB (静态形状) → Hash (编译时确定) 的演进</text>
+
+  <!-- Row 1: Dense first_k -->
+  <rect x="30" y="65" width="800" height="80" rx="8" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="50" y="88" font-size="11" font-weight="700" fill="#5F6368">V3 方案：first_k_dense（前 k 层用 Dense FFN）</text>
+
+  <rect x="50" y="100" width="80" height="30" rx="4" fill="#E0E0E0" stroke="#9E9E9E"/>
+  <text x="90" y="119" text-anchor="middle" font-size="8" fill="#616161">Dense FFN</text>
+  <rect x="140" y="100" width="80" height="30" rx="4" fill="#E0E0E0" stroke="#9E9E9E"/>
+  <text x="180" y="119" text-anchor="middle" font-size="8" fill="#616161">Dense FFN</text>
+  <rect x="230" y="100" width="80" height="30" rx="4" fill="#E0E0E0" stroke="#9E9E9E"/>
+  <text x="270" y="119" text-anchor="middle" font-size="8" fill="#616161">Dense FFN</text>
+  <text x="325" y="119" font-size="10" fill="#5F6368">...</text>
+  <rect x="345" y="100" width="100" height="30" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="395" y="119" text-anchor="middle" font-size="8" fill="#1967D2">MoE (Router)</text>
+  <rect x="455" y="100" width="100" height="30" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="505" y="119" text-anchor="middle" font-size="8" fill="#1967D2">MoE (Router)</text>
+  <text x="570" y="119" font-size="10" fill="#5F6368">...</text>
+
+  <rect x="600" y="95" width="210" height="40" rx="4" fill="#FCE8E6"/>
+  <text x="705" y="112" text-anchor="middle" font-size="8" fill="#C5221F">问题：Dense 不走 EP → 前 k 层无法</text>
+  <text x="705" y="126" text-anchor="middle" font-size="8" fill="#C5221F">并行到多 host → 参数/计算浪费</text>
+
+  <!-- Row 2: Hash first_k -->
+  <rect x="30" y="155" width="800" height="80" rx="8" fill="white" stroke="#34A853" stroke-width="2"/>
+  <rect x="30" y="155" width="800" height="25" rx="8" fill="#34A853" opacity="0.08"/>
+  <text x="50" y="175" font-size="11" font-weight="700" fill="#137333">V4 方案：first_k_hash（前 k 层用 Hash Routing MoE）</text>
+
+  <rect x="50" y="190" width="80" height="30" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="90" y="209" text-anchor="middle" font-size="8" fill="#137333">Hash MoE</text>
+  <rect x="140" y="190" width="80" height="30" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="180" y="209" text-anchor="middle" font-size="8" fill="#137333">Hash MoE</text>
+  <rect x="230" y="190" width="80" height="30" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="270" y="209" text-anchor="middle" font-size="8" fill="#137333">Hash MoE</text>
+  <text x="325" y="209" font-size="10" fill="#5F6368">...</text>
+  <rect x="345" y="190" width="100" height="30" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="395" y="209" text-anchor="middle" font-size="8" fill="#1967D2">MoE (Router)</text>
+  <rect x="455" y="190" width="100" height="30" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="505" y="209" text-anchor="middle" font-size="8" fill="#1967D2">MoE (Router)</text>
+  <text x="570" y="209" font-size="10" fill="#5F6368">...</text>
+
+  <rect x="600" y="185" width="210" height="40" rx="4" fill="#E6F4EA"/>
+  <text x="705" y="202" text-anchor="middle" font-size="8" fill="#0D652D">优点：全层都是 MoE → EP 通用</text>
+  <text x="705" y="216" text-anchor="middle" font-size="8" fill="#0D652D">Hash 层零路由开销 + 完美负载均衡</text>
+
+  <!-- TPU Pipeline comparison -->
+  <text x="430" y="260" text-anchor="middle" font-size="13" font-weight="700" fill="#202124">TPU 上 Hash Routing 的独特优势</text>
+
+  <!-- 4 advantage boxes -->
+  <rect x="30" y="278" width="195" height="105" rx="8" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <rect x="30" y="278" width="195" height="22" rx="8" fill="#1A73E8" opacity="0.15"/>
+  <rect x="30" y="290" width="195" height="10" fill="#1A73E8" opacity="0.15"/>
+  <text x="128" y="294" text-anchor="middle" font-size="9" font-weight="700" fill="#1A73E8">XLA 编译时确定</text>
+  <text x="45" y="318" font-size="8" fill="#3C4043">tid2eid 是常量表</text>
+  <text x="45" y="333" font-size="8" fill="#3C4043">→ XLA trace 时就知道路由</text>
+  <text x="45" y="348" font-size="8" fill="#3C4043">→ All-to-All 形状 100% 静态</text>
+  <text x="45" y="363" font-size="8" fill="#1A73E8" font-weight="600">→ compute-comm 完美 overlap</text>
+  <text x="45" y="378" font-size="8" fill="#5F6368">比 QB 还简单：连 quantile 都不需要</text>
+
+  <rect x="235" y="278" width="195" height="105" rx="8" fill="white" stroke="#34A853" stroke-width="1.5"/>
+  <rect x="235" y="278" width="195" height="22" rx="8" fill="#34A853" opacity="0.15"/>
+  <rect x="235" y="290" width="195" height="10" fill="#34A853" opacity="0.15"/>
+  <text x="332" y="294" text-anchor="middle" font-size="9" font-weight="700" fill="#137333">零路由计算</text>
+  <text x="250" y="318" font-size="8" fill="#3C4043">Router: W·x (矩阵乘法)</text>
+  <text x="250" y="333" font-size="8" fill="#3C4043">QB: quantile + 比较</text>
+  <text x="250" y="348" font-size="8" fill="#34A853" font-weight="600">Hash: gather(table, id)</text>
+  <text x="250" y="363" font-size="8" fill="#3C4043">→ TensorCore 零占用</text>
+  <text x="250" y="378" font-size="8" fill="#3C4043">→ SparseCore 也几乎无事可做</text>
+
+  <rect x="440" y="278" width="195" height="105" rx="8" fill="white" stroke="#F9AB00" stroke-width="1.5"/>
+  <rect x="440" y="278" width="195" height="22" rx="8" fill="#F9AB00" opacity="0.15"/>
+  <rect x="440" y="290" width="195" height="10" fill="#F9AB00" opacity="0.15"/>
+  <text x="537" y="294" text-anchor="middle" font-size="9" font-weight="700" fill="#E37400">EP 统一架构</text>
+  <text x="455" y="318" font-size="8" fill="#3C4043">V3: Dense 层不走 EP</text>
+  <text x="455" y="333" font-size="8" fill="#3C4043">→ 前 k 层每 device 独立全量参数</text>
+  <text x="455" y="348" font-size="8" fill="#E37400" font-weight="600">V4: Hash MoE 统一走 EP</text>
+  <text x="455" y="363" font-size="8" fill="#3C4043">→ 所有层参数均匀分布</text>
+  <text x="455" y="378" font-size="8" fill="#3C4043">→ HBM per-device 更均衡</text>
+
+  <rect x="645" y="278" width="185" height="105" rx="8" fill="white" stroke="#AB47BC" stroke-width="1.5"/>
+  <rect x="645" y="278" width="185" height="22" rx="8" fill="#AB47BC" opacity="0.15"/>
+  <rect x="645" y="290" width="185" height="10" fill="#AB47BC" opacity="0.15"/>
+  <text x="737" y="294" text-anchor="middle" font-size="9" font-weight="700" fill="#7B1FA2">384 expert 大规模 EP</text>
+  <text x="660" y="318" font-size="8" fill="#3C4043">V4: 384 experts (vs V3: 256)</text>
+  <text x="660" y="333" font-size="8" fill="#3C4043">→ EP 分片到更多 device</text>
+  <text x="660" y="348" font-size="8" fill="#3C4043">→ All-to-All 通信量更大</text>
+  <text x="660" y="363" font-size="8" fill="#7B1FA2" font-weight="600">Hash: 通信模式预知</text>
+  <text x="660" y="378" font-size="8" fill="#3C4043">→ ICI 路由表可预优化</text>
+
+  <!-- Bottom: TPU specific pipeline -->
+  <rect x="30" y="400" width="800" height="70" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="430" y="420" text-anchor="middle" font-size="11" font-weight="700" fill="#1A73E8">TPU v7 上的 Hash MoE 层执行流</text>
+
+  <rect x="55" y="433" width="110" height="28" rx="4" fill="#34A853" opacity="0.25" stroke="#34A853"/>
+  <text x="110" y="451" text-anchor="middle" font-size="8" fill="#137333">gather(tid2eid)</text>
+
+  <line x1="170" y1="447" x2="190" y2="447" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBc)"/>
+
+  <rect x="195" y="433" width="130" height="28" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="260" y="451" text-anchor="middle" font-size="8" fill="#1967D2">All-to-All (ICI, 静态)</text>
+
+  <line x1="330" y1="447" x2="350" y2="447" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBc)"/>
+
+  <rect x="355" y="433" width="160" height="28" rx="4" fill="#FBBC04" opacity="0.2" stroke="#F9AB00"/>
+  <text x="435" y="451" text-anchor="middle" font-size="8" fill="#E37400">Expert FFN (TensorCore)</text>
+
+  <line x1="520" y1="447" x2="540" y2="447" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBc)"/>
+
+  <rect x="545" y="433" width="130" height="28" rx="4" fill="#1A73E8" opacity="0.2" stroke="#1A73E8"/>
+  <text x="610" y="451" text-anchor="middle" font-size="8" fill="#1967D2">All-to-All (ICI, 静态)</text>
+
+  <line x1="680" y1="447" x2="700" y2="447" stroke="#5F6368" stroke-width="1" marker-end="url(#arrBc)"/>
+
+  <rect x="705" y="433" width="100" height="28" rx="4" fill="#34A853" opacity="0.2" stroke="#34A853"/>
+  <text x="755" y="451" text-anchor="middle" font-size="8" fill="#137333">Combine 权重</text>
+
+  <text x="430" y="478" text-anchor="middle" font-size="9" fill="#1A73E8" font-weight="600">全流程 XLA 单图编译 · 零 Host 同步 · 零 Router 计算 · ICI overlap 最大化</text>
+</svg>
