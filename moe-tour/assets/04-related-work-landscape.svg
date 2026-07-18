@@ -1,0 +1,49 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="340" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">动态 Expert 激活方案全景</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">苏剑林方案（绿框）以最小改动实现目标：改 argwhere + 复用 b 的自由度</text>
+
+  <!-- Row 1: Indirect approaches -->
+  <text x="50" y="80" font-size="11" font-weight="700" fill="#5F6368">间接方案</text>
+
+  <rect x="50" y="90" width="230" height="70" rx="6" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="165" y="112" text-anchor="middle" font-size="11" font-weight="600" fill="#3C4043">AdaMoE / MoE++</text>
+  <text x="165" y="130" text-anchor="middle" font-size="9" fill="#5F6368">混入空白/常数 Expert</text>
+  <text x="165" y="145" text-anchor="middle" font-size="9" fill="#EA4335">复用 Top-k 基建，灵活性不足</text>
+
+  <rect x="300" y="90" width="250" height="70" rx="6" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="425" y="112" text-anchor="middle" font-size="11" font-weight="600" fill="#3C4043">Top-p (Harder Tasks Need...)</text>
+  <text x="425" y="130" text-anchor="middle" font-size="9" fill="#5F6368">softmax 后按累积概率截断</text>
+  <text x="425" y="145" text-anchor="middle" font-size="9" fill="#EA4335">ρ 接近均匀时 p 爆炸，需额外熵约束</text>
+
+  <rect x="570" y="90" width="250" height="70" rx="6" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="695" y="112" text-anchor="middle" font-size="11" font-weight="600" fill="#3C4043">DA-MoE</text>
+  <text x="695" y="130" text-anchor="middle" font-size="9" fill="#5F6368">用 Attention 分数识别重要 token</text>
+  <text x="695" y="145" text-anchor="middle" font-size="9" fill="#EA4335">MoE 不局限于 FFN → 不通用</text>
+
+  <!-- Row 2: Direct approaches -->
+  <text x="50" y="185" font-size="11" font-weight="700" fill="#5F6368">直接方案</text>
+
+  <rect x="50" y="195" width="230" height="70" rx="6" fill="white" stroke="#5F6368" stroke-width="1"/>
+  <text x="165" y="217" text-anchor="middle" font-size="11" font-weight="600" fill="#3C4043">Ada-K Routing</text>
+  <text x="165" y="235" text-anchor="middle" font-size="9" fill="#5F6368">用 RL 训练 k 预测模块</text>
+  <text x="165" y="250" text-anchor="middle" font-size="9" fill="#EA4335">引入强化学习 → 训练复杂度 ↑</text>
+
+  <rect x="300" y="195" width="250" height="70" rx="6" fill="white" stroke="#F9AB00" stroke-width="1"/>
+  <text x="425" y="217" text-anchor="middle" font-size="11" font-weight="600" fill="#E37400">ReMoE</text>
+  <text x="425" y="235" text-anchor="middle" font-size="9" fill="#5F6368">同样基于零阈值，但用 Aux Loss</text>
+  <text x="425" y="250" text-anchor="middle" font-size="9" fill="#E37400">混合 Aux Loss + 手搓梯度，有糅合感</text>
+
+  <!-- Highlighted: This paper -->
+  <rect x="570" y="195" width="250" height="70" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="2"/>
+  <text x="695" y="217" text-anchor="middle" font-size="11" font-weight="700" fill="#137333">苏剑林方案 (本文)</text>
+  <text x="695" y="235" text-anchor="middle" font-size="9" fill="#137333">argwhere(ρ+b>0) + b 自由度分解</text>
+  <text x="695" y="250" text-anchor="middle" font-size="9" fill="#137333">最小改动 · 无额外模块 · 无 RL</text>
+
+  <!-- Bottom comparison -->
+  <rect x="50" y="280" width="770" height="50" rx="6" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1"/>
+  <text x="430" y="300" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">苏剑林方案的设计哲学</text>
+  <text x="430" y="318" text-anchor="middle" font-size="10" fill="#1967D2">不加新模块、不加新 Loss、不加新训练范式 — 只利用已有 Loss-Free 框架的冗余自由度</text>
+</svg>

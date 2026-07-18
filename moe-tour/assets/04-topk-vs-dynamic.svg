@@ -1,0 +1,102 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="420" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">固定 Top-k vs 动态激活：难 token 该分更多资源</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">从 argtop_k(ρ+b) 到 argwhere(ρ+b > 0)：每个 token 激活不同数量的 expert</text>
+
+  <!-- Left: Fixed Top-k -->
+  <rect x="30" y="65" width="390" height="340" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="225" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#1A73E8">固定 Top-k (k=2)</text>
+  <text x="225" y="108" text-anchor="middle" font-size="10" fill="#1967D2">每个 token 恒定激活 2 个 expert，不论难度</text>
+
+  <!-- Easy token -->
+  <rect x="50" y="125" width="350" height="60" rx="6" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="65" y="145" font-size="10" font-weight="600" fill="#1A73E8">简单 token: "的"</text>
+  <rect x="65" y="155" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="135" y="155" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="205" y="155" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="275" y="155" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="65" y="180" font-size="8" fill="#5F6368">E1 ★</text>
+  <text x="135" y="180" font-size="8" fill="#5F6368">E2 ★</text>
+  <text x="205" y="180" font-size="8" fill="#9AA0A6">E3</text>
+  <text x="275" y="180" font-size="8" fill="#9AA0A6">E4</text>
+
+  <!-- Medium token -->
+  <rect x="50" y="195" width="350" height="60" rx="6" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="65" y="215" font-size="10" font-weight="600" fill="#1A73E8">中等 token: "量子"</text>
+  <rect x="65" y="225" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="135" y="225" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="205" y="225" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="275" y="225" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="65" y="250" font-size="8" fill="#5F6368">E1 ★</text>
+  <text x="135" y="250" font-size="8" fill="#5F6368">E3 ★</text>
+  <text x="205" y="250" font-size="8" fill="#9AA0A6">E2</text>
+  <text x="275" y="250" font-size="8" fill="#9AA0A6">E4</text>
+
+  <!-- Hard token -->
+  <rect x="50" y="265" width="350" height="60" rx="6" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="65" y="285" font-size="10" font-weight="600" fill="#1A73E8">困难 token: "纠缠态"</text>
+  <rect x="65" y="295" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="135" y="295" width="60" height="16" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="205" y="295" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="275" y="295" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="65" y="320" font-size="8" fill="#5F6368">E2 ★</text>
+  <text x="135" y="320" font-size="8" fill="#5F6368">E4 ★</text>
+  <text x="205" y="320" font-size="8" fill="#9AA0A6">E1</text>
+  <text x="275" y="320" font-size="8" fill="#9AA0A6">E3</text>
+
+  <!-- Problem -->
+  <rect x="50" y="340" width="350" height="50" rx="6" fill="#FCE8E6" stroke="#EA4335" stroke-width="1"/>
+  <text x="225" y="360" text-anchor="middle" font-size="10" font-weight="600" fill="#C5221F">问题：所有 token 消耗相同算力</text>
+  <text x="225" y="378" text-anchor="middle" font-size="9" fill="#A50E0E">"的"用 2 个 expert 是浪费，"纠缠态"用 2 个不够</text>
+
+  <!-- Right: Dynamic -->
+  <rect x="440" y="65" width="390" height="340" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="635" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">动态激活 (平均 k=2)</text>
+  <text x="635" y="108" text-anchor="middle" font-size="10" fill="#0D652D">argwhere(ρ+b > 0)：满足条件的 expert 都选中</text>
+
+  <!-- Easy token - fewer experts -->
+  <rect x="460" y="125" width="350" height="60" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="475" y="145" font-size="10" font-weight="600" fill="#137333">简单 token: "的" → 1 个 expert</text>
+  <rect x="475" y="155" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="545" y="155" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="615" y="155" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="685" y="155" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="475" y="180" font-size="8" fill="#137333">E1 ★</text>
+  <text x="545" y="180" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+  <text x="615" y="180" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+  <text x="685" y="180" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+
+  <!-- Medium token - 2 experts -->
+  <rect x="460" y="195" width="350" height="60" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="475" y="215" font-size="10" font-weight="600" fill="#137333">中等 token: "量子" → 2 个 expert</text>
+  <rect x="475" y="225" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="545" y="225" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="615" y="225" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <rect x="685" y="225" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="475" y="250" font-size="8" fill="#137333">E1 ★</text>
+  <text x="545" y="250" font-size="8" fill="#137333">E3 ★</text>
+  <text x="615" y="250" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+  <text x="685" y="250" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+
+  <!-- Hard token - 3 experts -->
+  <rect x="460" y="265" width="350" height="60" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="475" y="285" font-size="10" font-weight="600" fill="#137333">困难 token: "纠缠态" → 3 个 expert</text>
+  <rect x="475" y="295" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="545" y="295" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="615" y="295" width="60" height="16" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="685" y="295" width="60" height="16" rx="3" fill="#E8EAED"/>
+  <text x="475" y="320" font-size="8" fill="#137333">E2 ★</text>
+  <text x="545" y="320" font-size="8" fill="#137333">E3 ★</text>
+  <text x="615" y="320" font-size="8" fill="#137333">E4 ★</text>
+  <text x="685" y="320" font-size="8" fill="#9AA0A6">ρ+b≤0</text>
+
+  <!-- Benefit -->
+  <rect x="460" y="340" width="350" height="50" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="360" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">优势：计算资源按需分配</text>
+  <text x="635" y="378" text-anchor="middle" font-size="9" fill="#0D652D">简单省算力，困难多投入。平均仍 = k = 2</text>
+
+  <!-- Bottom insight -->
+  <rect x="130" y="408" width="600" height="6" rx="3" fill="#F9AB00" opacity="0.3"/>
+</svg>
