@@ -1,0 +1,114 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="440" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Fine-Grained Expert：用组合数覆盖非均匀分布</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">n→2n, k→2k：每个 expert 更小但组合多样性 C(2n,2k) ≫ C(n,k) 大幅提升</text>
+
+  <!-- Left: Coarse experts -->
+  <rect x="30" y="65" width="390" height="350" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="225" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#1A73E8">粗粒度：4 个 Expert, 选 2 个</text>
+  <text x="225" y="108" text-anchor="middle" font-size="10" fill="#1967D2">C(4,2) = 6 种组合</text>
+
+  <!-- 4 large expert boxes -->
+  <rect x="55" y="125" width="80" height="50" rx="6" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="95" y="148" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">E1</text>
+  <text x="95" y="165" text-anchor="middle" font-size="9" fill="#5F6368">大 FFN</text>
+
+  <rect x="145" y="125" width="80" height="50" rx="6" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="185" y="148" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">E2</text>
+  <text x="185" y="165" text-anchor="middle" font-size="9" fill="#5F6368">大 FFN</text>
+
+  <rect x="235" y="125" width="80" height="50" rx="6" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="275" y="148" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">E3</text>
+  <text x="275" y="165" text-anchor="middle" font-size="9" fill="#5F6368">大 FFN</text>
+
+  <rect x="325" y="125" width="80" height="50" rx="6" fill="white" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="365" y="148" text-anchor="middle" font-size="11" font-weight="600" fill="#1A73E8">E4</text>
+  <text x="365" y="165" text-anchor="middle" font-size="9" fill="#5F6368">大 FFN</text>
+
+  <!-- All 6 combinations listed -->
+  <text x="55" y="200" font-size="10" font-weight="600" fill="#3C4043">所有可能的组合：</text>
+  <text x="55" y="218" font-size="10" fill="#5F6368">(1) E1+E2  (2) E1+E3  (3) E1+E4</text>
+  <text x="55" y="236" font-size="10" fill="#5F6368">(4) E2+E3  (5) E2+E4  (6) E3+E4</text>
+
+  <!-- Zipf coverage diagram -->
+  <text x="55" y="265" font-size="10" font-weight="600" fill="#3C4043">知识分布覆盖（Zipf-like）：</text>
+
+  <!-- Simple coverage bar -->
+  <rect x="55" y="280" width="350" height="20" rx="3" fill="#E8EAED" stroke="#5F6368" stroke-width="0.5"/>
+  <rect x="55" y="280" width="120" height="20" rx="3" fill="#1A73E8" opacity="0.7"/>
+  <rect x="175" y="280" width="80" height="20" rx="3" fill="#1A73E8" opacity="0.4"/>
+  <rect x="255" y="280" width="40" height="20" rx="3" fill="#1A73E8" opacity="0.2"/>
+  <text x="115" y="295" text-anchor="middle" font-size="9" fill="white" font-weight="600">头部</text>
+  <text x="215" y="295" text-anchor="middle" font-size="9" fill="white">中间</text>
+
+  <text x="55" y="320" font-size="9" fill="#EA4335">❌ 6 种组合太少，长尾知识难以覆盖</text>
+
+  <!-- Problem -->
+  <rect x="55" y="340" width="350" height="60" rx="6" fill="#FCE8E6" stroke="#EA4335" stroke-width="1"/>
+  <text x="225" y="360" text-anchor="middle" font-size="10" font-weight="600" fill="#C5221F">4 个 Expert 太粗，每个 Expert 被迫</text>
+  <text x="225" y="378" text-anchor="middle" font-size="10" fill="#C5221F">"大而全"→ 知识表示不够精细</text>
+  <text x="225" y="393" text-anchor="middle" font-size="9" fill="#A50E0E">专家少 → 每人承载太多 → 组合少 → 覆盖差</text>
+
+  <!-- Right: Fine-grained experts -->
+  <rect x="440" y="65" width="390" height="350" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="635" y="90" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">细粒度：8 个 Expert, 选 4 个</text>
+  <text x="635" y="108" text-anchor="middle" font-size="10" fill="#0D652D">C(8,4) = 70 种组合（11.7× 提升！）</text>
+
+  <!-- 8 small expert boxes in 2 rows -->
+  <rect x="455" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="475" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e1</text>
+
+  <rect x="500" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="520" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e2</text>
+
+  <rect x="545" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="565" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e3</text>
+
+  <rect x="590" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="610" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e4</text>
+
+  <rect x="635" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="655" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e5</text>
+
+  <rect x="680" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="700" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e6</text>
+
+  <rect x="725" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="745" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e7</text>
+
+  <rect x="770" y="125" width="40" height="35" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="790" y="148" text-anchor="middle" font-size="9" font-weight="600" fill="#137333">e8</text>
+
+  <text x="635" y="175" text-anchor="middle" font-size="9" fill="#5F6368">每个 expert 更小（dim/2），但更专精</text>
+
+  <!-- Combination count comparison -->
+  <text x="455" y="200" font-size="10" font-weight="600" fill="#3C4043">组合数爆炸式增长：</text>
+  <text x="455" y="218" font-size="10" fill="#5F6368">C(8,4) = 70 vs C(4,2) = 6 → 11.7× 更多组合</text>
+  <text x="455" y="236" font-size="10" fill="#5F6368">总参数不变（8×小FFN ≈ 4×大FFN）</text>
+
+  <!-- Better coverage bar -->
+  <text x="455" y="265" font-size="10" font-weight="600" fill="#3C4043">知识分布覆盖（Zipf-like）：</text>
+
+  <rect x="455" y="280" width="350" height="20" rx="3" fill="#E8EAED" stroke="#5F6368" stroke-width="0.5"/>
+  <rect x="455" y="280" width="140" height="20" rx="3" fill="#34A853" opacity="0.7"/>
+  <rect x="595" y="280" width="100" height="20" rx="3" fill="#34A853" opacity="0.5"/>
+  <rect x="695" y="280" width="70" height="20" rx="3" fill="#34A853" opacity="0.3"/>
+  <rect x="765" y="280" width="40" height="20" rx="3" fill="#34A853" opacity="0.15"/>
+  <text x="525" y="295" text-anchor="middle" font-size="9" fill="white" font-weight="600">头部</text>
+  <text x="645" y="295" text-anchor="middle" font-size="9" fill="white">中间</text>
+  <text x="730" y="295" text-anchor="middle" font-size="9" fill="white">尾部</text>
+
+  <text x="455" y="320" font-size="9" fill="#137333">✓ 70 种组合覆盖更多长尾知识模式</text>
+
+  <!-- Benefit -->
+  <rect x="455" y="340" width="350" height="60" rx="6" fill="#E6F4EA" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="360" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">更小更精 → 每个 Expert 专攻一个</text>
+  <text x="635" y="378" text-anchor="middle" font-size="10" fill="#137333">细分领域 → 组合爆炸 → 更好覆盖</text>
+  <text x="635" y="393" text-anchor="middle" font-size="9" fill="#0D652D">DeepSeek V2→V3: 64→256 experts (16→8 top-k)</text>
+
+  <!-- Bottom comparison -->
+  <rect x="130" y="420" width="600" height="14" rx="4" fill="#F9AB00" opacity="0.15"/>
+  <text x="430" y="432" text-anchor="middle" font-size="10" fill="#E37400">核心洞察：不是"好的 expert 应该更大"，而是"好的 MoE 应该有更多小 expert 的组合"</text>
+</svg>

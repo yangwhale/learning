@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 440" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="440" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Shared Expert vs Routed Expert：常任理事国 + 选任代表</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">Shared Expert 始终参与每个 token 的计算，Routed Expert 由 Router 动态选择</text>
+
+  <!-- Input token -->
+  <rect x="355" y="70" width="150" height="36" rx="6" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="430" y="93" text-anchor="middle" font-size="12" font-weight="600" fill="#1A73E8">Token x</text>
+
+  <!-- Arrow down split -->
+  <line x1="430" y1="106" x2="430" y2="130" stroke="#5F6368" stroke-width="1.5" marker-end="url(#arr5a)"/>
+  <defs>
+    <marker id="arr5a" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <polygon points="0 0, 8 3, 0 6" fill="#5F6368"/>
+    </marker>
+  </defs>
+
+  <!-- Router -->
+  <rect x="320" y="130" width="220" height="36" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1.5"/>
+  <text x="430" y="153" text-anchor="middle" font-size="12" font-weight="600" fill="#E37400">Router: ρ = σ(Wx)</text>
+
+  <!-- Split arrows -->
+  <line x1="340" y1="166" x2="180" y2="200" stroke="#34A853" stroke-width="1.5" marker-end="url(#arr5a)"/>
+  <line x1="520" y1="166" x2="680" y2="200" stroke="#1A73E8" stroke-width="1.5" marker-end="url(#arr5a)"/>
+
+  <!-- Left: Shared Expert (always on) -->
+  <rect x="40" y="200" width="280" height="170" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="2"/>
+  <text x="180" y="225" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">Shared Expert（常任理事国）</text>
+  <text x="180" y="245" text-anchor="middle" font-size="10" fill="#0D652D">每个 token 必经，不经 Router 选择</text>
+
+  <rect x="65" y="260" width="230" height="30" rx="4" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="180" y="280" text-anchor="middle" font-size="11" fill="#137333">Expert_shared(x) = SwiGLU(x)</text>
+
+  <text x="65" y="310" font-size="10" fill="#3C4043">作用：捕获通用知识（语法、常识、</text>
+  <text x="65" y="325" font-size="10" fill="#3C4043">高频 pattern）→ 残差学习基线</text>
+
+  <rect x="65" y="340" width="230" height="22" rx="4" fill="#34A853" opacity="0.1"/>
+  <text x="180" y="356" text-anchor="middle" font-size="10" font-weight="600" fill="#137333">始终激活 · 独立维度 · 1 个</text>
+
+  <!-- Right: Routed Experts (selected) -->
+  <rect x="540" y="200" width="280" height="170" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="2"/>
+  <text x="680" y="225" text-anchor="middle" font-size="13" font-weight="700" fill="#1A73E8">Routed Experts（选任代表）</text>
+  <text x="680" y="245" text-anchor="middle" font-size="10" fill="#1967D2">由 Router 从 n-s 个中选 top-(k-s)</text>
+
+  <!-- Expert boxes -->
+  <rect x="555" y="260" width="50" height="28" rx="4" fill="#1A73E8" opacity="0.7"/>
+  <text x="580" y="279" text-anchor="middle" font-size="9" fill="white" font-weight="600">E1 ★</text>
+
+  <rect x="615" y="260" width="50" height="28" rx="4" fill="#1A73E8" opacity="0.7"/>
+  <text x="640" y="279" text-anchor="middle" font-size="9" fill="white" font-weight="600">E2 ★</text>
+
+  <rect x="675" y="260" width="50" height="28" rx="4" fill="#E8EAED"/>
+  <text x="700" y="279" text-anchor="middle" font-size="9" fill="#9AA0A6">E3</text>
+
+  <rect x="735" y="260" width="50" height="28" rx="4" fill="#E8EAED"/>
+  <text x="760" y="279" text-anchor="middle" font-size="9" fill="#9AA0A6">E4</text>
+
+  <text x="555" y="310" font-size="9" fill="#5F6368">... 共 n-s 个候选，选 k-s 个</text>
+
+  <text x="555" y="335" font-size="10" fill="#3C4043">作用：捕获专业知识（特定领域、</text>
+  <text x="555" y="350" font-size="10" fill="#3C4043">罕见模式）→ 残差增量修正</text>
+
+  <rect x="555" y="340" width="245" height="22" rx="4" fill="#1A73E8" opacity="0.1"/>
+  <text x="680" y="356" text-anchor="middle" font-size="10" font-weight="600" fill="#1A73E8">动态选择 · Router 路由 · n-s 个</text>
+
+  <!-- Merge arrows -->
+  <line x1="180" y1="370" x2="380" y2="400" stroke="#34A853" stroke-width="1.5" marker-end="url(#arr5a)"/>
+  <line x1="680" y1="370" x2="480" y2="400" stroke="#1A73E8" stroke-width="1.5" marker-end="url(#arr5a)"/>
+
+  <!-- Output: sum -->
+  <rect x="330" y="395" width="200" height="36" rx="6" fill="#F3E8FD" stroke="#9334E6" stroke-width="1.5"/>
+  <text x="430" y="413" text-anchor="middle" font-size="11" font-weight="600" fill="#7627BB">y = E_shared(x) + λ · Σ g_i · E_i(x)</text>
+  <text x="430" y="427" text-anchor="middle" font-size="9" fill="#9334E6">λ 缩放因子平衡两组 Expert 的贡献量级</text>
+</svg>
