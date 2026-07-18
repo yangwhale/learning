@@ -1,0 +1,88 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 420" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="420" fill="#FAFAFA" rx="8"/>
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">MoE 门控激活函数分类：归一化之争</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">Softmax (先归一化) vs Re-Norm (后归一化) vs Sigmoid/ReLU (不归一化) — 哪个更有理论根据？</text>
+
+  <!-- Column 1: Softmax -->
+  <rect x="30" y="65" width="250" height="340" rx="8" fill="white" stroke="#1A73E8" stroke-width="2"/>
+  <rect x="30" y="65" width="250" height="28" rx="8" fill="#1A73E8"/>
+  <rect x="30" y="80" width="250" height="13" fill="#1A73E8"/>
+  <text x="155" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Softmax (先归一化)</text>
+
+  <text x="45" y="110" font-size="10" font-weight="600" fill="#1A73E8">公式</text>
+  <text x="45" y="130" font-size="9" fill="#3C4043">ρ_i = exp(s_i) / Σ exp(s_j)</text>
+  <text x="45" y="148" font-size="9" fill="#3C4043">y = Σ_{Top-K} ρ_i · e_i</text>
+
+  <text x="45" y="172" font-size="10" font-weight="600" fill="#1A73E8">特点</text>
+  <text x="45" y="192" font-size="9" fill="#5F6368">- 所有 ρ_i 之和 = 1</text>
+  <text x="45" y="208" font-size="9" fill="#5F6368">- Top-K 后的 ρ 之和 &lt; 1</text>
+  <text x="45" y="224" font-size="9" fill="#5F6368">- 有概率解释（KL 推导支持）</text>
+
+  <text x="45" y="248" font-size="10" font-weight="600" fill="#137333">理论根据</text>
+  <text x="45" y="268" font-size="9" fill="#137333">苏剑林推导：KL(p||q) 最小化</text>
+  <text x="45" y="284" font-size="9" fill="#137333">→ p_i·e_i 形式 = Softmax 门控</text>
+  <text x="45" y="300" font-size="9" fill="#137333">前后向一致，无 Stop Gradient</text>
+
+  <text x="45" y="324" font-size="10" font-weight="600" fill="#5F6368">代表模型</text>
+  <text x="45" y="344" font-size="9" fill="#5F6368">GShard, Switch, GLaM</text>
+  <text x="45" y="360" font-size="9" fill="#5F6368">MaxText (默认)</text>
+  <text x="45" y="376" font-size="9" fill="#5F6368">Kimi K3 (Sqrt-Softplus)</text>
+
+  <rect x="45" y="385" width="220" height="15" rx="3" fill="#1A73E8" opacity="0.15"/>
+  <text x="155" y="396" text-anchor="middle" font-size="8" font-weight="600" fill="#1A73E8">理论最优（k=1 精确推导）</text>
+
+  <!-- Column 2: Re-Norm -->
+  <rect x="305" y="65" width="250" height="340" rx="8" fill="white" stroke="#F9AB00" stroke-width="2"/>
+  <rect x="305" y="65" width="250" height="28" rx="8" fill="#F9AB00"/>
+  <rect x="305" y="80" width="250" height="13" fill="#F9AB00"/>
+  <text x="430" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Re-Norm (后归一化)</text>
+
+  <text x="320" y="110" font-size="10" font-weight="600" fill="#E37400">公式</text>
+  <text x="320" y="130" font-size="9" fill="#3C4043">先选 Top-K by s_i</text>
+  <text x="320" y="148" font-size="9" fill="#3C4043">y = Σ ρ_i·e_i / Σ ρ_i (选中的)</text>
+
+  <text x="320" y="172" font-size="10" font-weight="600" fill="#E37400">特点</text>
+  <text x="320" y="192" font-size="9" fill="#5F6368">- 选中 ρ_i 之和 = 1 (重新归一化)</text>
+  <text x="320" y="208" font-size="9" fill="#5F6368">- 等价: 未选中设 -∞ 后 Softmax</text>
+  <text x="320" y="224" font-size="9" fill="#5F6368">- 数值更稳定（输出尺度固定）</text>
+
+  <text x="320" y="248" font-size="10" font-weight="600" fill="#EA4335">理论问题</text>
+  <text x="320" y="268" font-size="9" fill="#EA4335">k=1 时 ρ 完全没有梯度！</text>
+  <text x="320" y="284" font-size="9" fill="#EA4335">（归一化后 = 常数 1）</text>
+  <text x="320" y="300" font-size="9" fill="#EA4335">偏离 KL 推导的最优形式</text>
+
+  <text x="320" y="324" font-size="10" font-weight="600" fill="#5F6368">代表模型</text>
+  <text x="320" y="344" font-size="9" fill="#5F6368">一些开源 MoE 实现</text>
+  <text x="320" y="360" font-size="9" fill="#5F6368">（较少被主流采用）</text>
+
+  <rect x="320" y="385" width="220" height="15" rx="3" fill="#F9AB00" opacity="0.15"/>
+  <text x="430" y="396" text-anchor="middle" font-size="8" font-weight="600" fill="#E37400">实用但理论次优</text>
+
+  <!-- Column 3: Sigmoid/ReLU -->
+  <rect x="580" y="65" width="250" height="340" rx="8" fill="white" stroke="#34A853" stroke-width="1.5"/>
+  <rect x="580" y="65" width="250" height="28" rx="8" fill="#34A853"/>
+  <rect x="580" y="80" width="250" height="13" fill="#34A853"/>
+  <text x="705" y="84" text-anchor="middle" font-size="12" font-weight="700" fill="white">Sigmoid / ReLU (不归一化)</text>
+
+  <text x="595" y="110" font-size="10" font-weight="600" fill="#137333">公式</text>
+  <text x="595" y="130" font-size="9" fill="#3C4043">Sigmoid: ρ_i = σ(s_i)</text>
+  <text x="595" y="148" font-size="9" fill="#3C4043">ReLU: ρ_i = max(0, s_i)</text>
+
+  <text x="595" y="172" font-size="10" font-weight="600" fill="#137333">特点</text>
+  <text x="595" y="192" font-size="9" fill="#5F6368">- ρ_i 之和 ≠ 1（无归一化）</text>
+  <text x="595" y="208" font-size="9" fill="#5F6368">- 各 expert 独立打分</text>
+  <text x="595" y="224" font-size="9" fill="#5F6368">- 适配 Loss-Free 均衡（加 bias）</text>
+
+  <text x="595" y="248" font-size="10" font-weight="600" fill="#137333">理论视角</text>
+  <text x="595" y="268" font-size="9" fill="#137333">几何解释 (第 1 篇):</text>
+  <text x="595" y="284" font-size="9" fill="#137333">任意非负激活函数都可行</text>
+  <text x="595" y="300" font-size="9" fill="#5F6368">无概率解释但实践效果好</text>
+
+  <text x="595" y="324" font-size="10" font-weight="600" fill="#5F6368">代表模型</text>
+  <text x="595" y="344" font-size="9" fill="#5F6368">DeepSeek V3/V4 (Sigmoid)</text>
+  <text x="595" y="360" font-size="9" fill="#5F6368">ReMoE (ReLU)</text>
+  <text x="595" y="376" font-size="9" fill="#5F6368">K3: SiTU = σ(x)·tanh(x)</text>
+
+  <rect x="595" y="385" width="220" height="15" rx="3" fill="#34A853" opacity="0.15"/>
+  <text x="705" y="396" text-anchor="middle" font-size="8" font-weight="600" fill="#137333">工程友好 + Loss-Free 兼容</text>
+</svg>
