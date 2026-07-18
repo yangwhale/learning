@@ -1,0 +1,83 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 380" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="380" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">MoE 负载不均衡：两大灾难</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">没有均衡机制的 MoE 训练会出现 Dead Expert + Token Dropping</text>
+
+  <!-- Left: Dead Expert -->
+  <rect x="40" y="70" width="370" height="280" rx="8" fill="#FCE8E6" stroke="#EA4335" stroke-width="1.5"/>
+  <text x="225" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#C5221F">Dead Expert（专家死亡）</text>
+
+  <!-- Expert bars - unbalanced -->
+  <text x="70" y="130" font-size="10" fill="#5F6368">Expert 负载分布：</text>
+
+  <!-- Hot experts -->
+  <rect x="70" y="140" width="280" height="18" rx="3" fill="#1A73E8" opacity="0.8"/>
+  <text x="80" y="154" font-size="9" fill="white" font-weight="600">Expert 1：处理 40% token</text>
+
+  <rect x="70" y="162" width="200" height="18" rx="3" fill="#1A73E8" opacity="0.6"/>
+  <text x="80" y="176" font-size="9" fill="white" font-weight="600">Expert 2：处理 28% token</text>
+
+  <rect x="70" y="184" width="140" height="18" rx="3" fill="#1A73E8" opacity="0.4"/>
+  <text x="80" y="198" font-size="9" fill="#1967D2">Expert 3：处理 20%</text>
+
+  <rect x="70" y="206" width="50" height="18" rx="3" fill="#1A73E8" opacity="0.2"/>
+  <text x="80" y="220" font-size="9" fill="#1967D2">E4: 7%</text>
+
+  <rect x="70" y="228" width="20" height="18" rx="3" fill="#EA4335" opacity="0.3"/>
+  <text x="95" y="242" font-size="9" fill="#EA4335">E5: 3%</text>
+
+  <rect x="70" y="250" width="8" height="18" rx="3" fill="#EA4335" opacity="0.5"/>
+  <text x="85" y="264" font-size="9" fill="#EA4335">E6: 1%</text>
+
+  <rect x="70" y="272" width="3" height="18" rx="3" fill="#EA4335" opacity="0.8"/>
+  <text x="80" y="286" font-size="9" fill="#EA4335">E7: ~0% (Dead!)</text>
+
+  <rect x="70" y="294" width="3" height="18" rx="3" fill="#EA4335" opacity="0.8"/>
+  <text x="80" y="308" font-size="9" fill="#EA4335">E8: ~0% (Dead!)</text>
+
+  <!-- Dead expert consequence -->
+  <rect x="60" y="320" width="340" height="20" rx="4" fill="#EA4335" opacity="0.1"/>
+  <text x="225" y="335" text-anchor="middle" font-size="10" font-weight="600" fill="#C5221F">后果：花了 8 expert 的显存，只训出 4 expert 的效果</text>
+
+  <!-- Right: Token Dropping -->
+  <rect x="450" y="70" width="370" height="280" rx="8" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1.5"/>
+  <text x="635" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#E37400">Token Dropping（词元丢弃）</text>
+
+  <!-- Capacity illustration -->
+  <text x="480" y="125" font-size="10" fill="#5F6368">每 Expert 预留容量 (capacity_factor=1.5x)：</text>
+
+  <!-- Expert with overflow -->
+  <rect x="480" y="140" width="300" height="45" rx="4" fill="white" stroke="#F9AB00" stroke-width="1"/>
+  <text x="490" y="157" font-size="10" font-weight="600" fill="#E37400">Expert 1 (热门)</text>
+  <!-- Capacity line -->
+  <line x1="700" y1="140" x2="700" y2="185" stroke="#EA4335" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="710" y="153" font-size="8" fill="#EA4335">容量上限</text>
+  <!-- Overflow tokens -->
+  <rect x="480" y="165" width="250" height="12" rx="2" fill="#1A73E8" opacity="0.4"/>
+  <text x="490" y="175" font-size="8" fill="#1967D2">已分配 token ██████████████████</text>
+  <rect x="700" y="165" width="70" height="12" rx="2" fill="#EA4335" opacity="0.4"/>
+  <text x="710" y="175" font-size="8" fill="#C5221F">丢弃!</text>
+
+  <!-- Expert with underflow -->
+  <rect x="480" y="200" width="300" height="45" rx="4" fill="white" stroke="#F9AB00" stroke-width="1"/>
+  <text x="490" y="217" font-size="10" font-weight="600" fill="#E37400">Expert 5 (冷门)</text>
+  <line x1="700" y1="200" x2="700" y2="245" stroke="#34A853" stroke-width="2" stroke-dasharray="4,3"/>
+  <text x="710" y="213" font-size="8" fill="#34A853">容量上限</text>
+  <rect x="480" y="225" width="80" height="12" rx="2" fill="#1A73E8" opacity="0.4"/>
+  <text x="490" y="235" font-size="8" fill="#1967D2">token ███</text>
+  <rect x="560" y="225" width="140" height="12" rx="2" fill="#E8EAED"/>
+  <text x="570" y="235" font-size="8" fill="#9AA0A6">零填充 (padding 浪费)</text>
+
+  <!-- Consequence boxes -->
+  <rect x="480" y="260" width="310" height="30" rx="4" fill="#EA4335" opacity="0.1"/>
+  <text x="635" y="280" text-anchor="middle" font-size="10" fill="#C5221F">Token Drop → 信息不可恢复地丢失</text>
+
+  <rect x="480" y="295" width="310" height="30" rx="4" fill="#F9AB00" opacity="0.1"/>
+  <text x="635" y="315" text-anchor="middle" font-size="10" fill="#E37400">Padding → ~33% MXU 算力浪费在零向量上</text>
+
+  <!-- Bottom summary -->
+  <rect x="100" y="358" width="660" height="18" rx="4" fill="#E8F0FE"/>
+  <text x="430" y="372" text-anchor="middle" font-size="10" font-weight="600" fill="#1A73E8">Aux Loss 的目标：让负载分布 F 趋近均匀分布 Q = (1/n, ..., 1/n)</text>
+</svg>

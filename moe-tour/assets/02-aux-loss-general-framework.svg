@@ -1,0 +1,48 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 340" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="860" height="340" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="430" y="28" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Aux Loss 的一般构造框架</text>
+  <text x="430" y="48" text-anchor="middle" font-size="11" fill="#5F6368">设计任意基于 F 的损失，然后 F → P + sg[F - P]</text>
+
+  <!-- The recipe -->
+  <rect x="40" y="70" width="380" height="250" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="230" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#1A73E8">两步构造法</text>
+
+  <!-- Step 1 -->
+  <rect x="60" y="110" width="340" height="55" rx="6" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="230" y="132" text-anchor="middle" font-size="11" font-weight="600" fill="#1967D2">Step 1: 基于 F 设计目标</text>
+  <text x="230" y="150" text-anchor="middle" font-size="10" fill="#5F6368">选任意损失函数 L(F, Q)，让 F → Q</text>
+
+  <!-- Step 2 -->
+  <rect x="60" y="175" width="340" height="55" rx="6" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="230" y="197" text-anchor="middle" font-size="11" font-weight="600" fill="#1967D2">Step 2: STE 替换</text>
+  <text x="230" y="215" text-anchor="middle" font-size="10" fill="#5F6368">实现时 F → P + sg[F - P]</text>
+
+  <!-- Key constraint -->
+  <rect x="60" y="245" width="340" height="55" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="230" y="265" text-anchor="middle" font-size="10" font-weight="600" fill="#E37400">前向: 值 = F（真实统计量）</text>
+  <text x="230" y="282" text-anchor="middle" font-size="10" font-weight="600" fill="#E37400">反向: 梯度 = ∇P（可导近似）</text>
+
+  <!-- Right: Examples -->
+  <rect x="450" y="70" width="370" height="250" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="635" y="95" text-anchor="middle" font-size="13" font-weight="700" fill="#137333">具体实例</text>
+
+  <!-- Example 1: L2 -->
+  <rect x="470" y="110" width="330" height="60" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="132" text-anchor="middle" font-size="11" font-weight="600" fill="#137333">L2 距离 (GShard)</text>
+  <text x="635" y="150" text-anchor="middle" font-size="10" fill="#3C4043">L(F, Q) = (1/2) ‖F - Q‖²</text>
+  <text x="635" y="164" text-anchor="middle" font-size="9" fill="#5F6368">→ 简化后梯度等价于 F·P</text>
+
+  <!-- Example 2: Entropy -->
+  <rect x="470" y="180" width="330" height="60" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="202" text-anchor="middle" font-size="11" font-weight="600" fill="#137333">最大熵 (苏剑林扩展)</text>
+  <text x="635" y="220" text-anchor="middle" font-size="10" fill="#3C4043">L(F) = Σ F_i log F_i</text>
+  <text x="635" y="234" text-anchor="middle" font-size="9" fill="#5F6368">→ 梯度等价于 Σ P_i log F_i</text>
+
+  <!-- Example 3: Custom target -->
+  <rect x="470" y="250" width="330" height="55" rx="6" fill="white" stroke="#34A853" stroke-width="1"/>
+  <text x="635" y="272" text-anchor="middle" font-size="11" font-weight="600" fill="#137333">自定义目标 (非均匀)</text>
+  <text x="635" y="290" text-anchor="middle" font-size="10" fill="#3C4043">Q 不必是均匀分布</text>
+  <text x="635" y="304" text-anchor="middle" font-size="9" fill="#5F6368">→ 可将部分 expert 设为更高容量</text>
+</svg>

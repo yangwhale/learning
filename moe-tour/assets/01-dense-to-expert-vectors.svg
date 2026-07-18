@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 400" font-family="Google Sans, Segoe UI, sans-serif">
+  <rect width="800" height="400" fill="#FAFAFA" rx="8"/>
+
+  <!-- Title -->
+  <text x="400" y="30" text-anchor="middle" font-size="15" font-weight="700" fill="#202124">Dense FFN = n 个 Expert 向量之和</text>
+  <text x="400" y="50" text-anchor="middle" font-size="11" fill="#5F6368">y = f(x W_A) W_B = v_1 + v_2 + ... + v_n</text>
+
+  <!-- Left: Dense FFN block -->
+  <rect x="40" y="80" width="200" height="260" rx="8" fill="#E8F0FE" stroke="#1A73E8" stroke-width="1.5"/>
+  <text x="140" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="#1A73E8">Dense FFN</text>
+
+  <!-- W_A matrix -->
+  <rect x="60" y="120" width="160" height="60" rx="4" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="140" y="148" text-anchor="middle" font-size="11" fill="#1967D2">W_A (d x D)</text>
+  <text x="140" y="165" text-anchor="middle" font-size="9" fill="#5F6368">上投影矩阵</text>
+
+  <!-- f activation -->
+  <text x="140" y="200" text-anchor="middle" font-size="12" fill="#E37400" font-weight="600">f( )</text>
+
+  <!-- W_B matrix -->
+  <rect x="60" y="215" width="160" height="60" rx="4" fill="white" stroke="#1A73E8" stroke-width="1"/>
+  <text x="140" y="243" text-anchor="middle" font-size="11" fill="#1967D2">W_B (D x d)</text>
+  <text x="140" y="260" text-anchor="middle" font-size="9" fill="#5F6368">下投影矩阵</text>
+
+  <!-- Output y -->
+  <rect x="80" y="295" width="120" height="30" rx="6" fill="#1A73E8" opacity="0.15" stroke="#1A73E8" stroke-width="1"/>
+  <text x="140" y="315" text-anchor="middle" font-size="11" font-weight="600" fill="#1967D2">y (d 维)</text>
+
+  <!-- Equals sign -->
+  <text x="280" y="210" text-anchor="middle" font-size="28" font-weight="700" fill="#34A853">=</text>
+
+  <!-- Right: Split into n expert vectors -->
+  <rect x="320" y="80" width="440" height="260" rx="8" fill="#E6F4EA" stroke="#34A853" stroke-width="1.5"/>
+  <text x="540" y="105" text-anchor="middle" font-size="13" font-weight="600" fill="#137333">分块矩阵等价改写</text>
+
+  <!-- Expert blocks -->
+  <rect x="340" y="120" width="90" height="100" rx="6" fill="#FBBC04" opacity="0.15" stroke="#F9AB00" stroke-width="1"/>
+  <text x="385" y="145" text-anchor="middle" font-size="10" font-weight="600" fill="#E37400">Expert 1</text>
+  <text x="385" y="163" text-anchor="middle" font-size="9" fill="#B06000">W_1^A (d x c)</text>
+  <text x="385" y="178" text-anchor="middle" font-size="9" fill="#B06000">f( )</text>
+  <text x="385" y="193" text-anchor="middle" font-size="9" fill="#B06000">W_1^B (c x d)</text>
+  <text x="385" y="213" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">= v_1</text>
+
+  <!-- Plus -->
+  <text x="445" y="175" text-anchor="middle" font-size="20" font-weight="700" fill="#5F6368">+</text>
+
+  <rect x="460" y="120" width="90" height="100" rx="6" fill="#FBBC04" opacity="0.15" stroke="#F9AB00" stroke-width="1"/>
+  <text x="505" y="145" text-anchor="middle" font-size="10" font-weight="600" fill="#E37400">Expert 2</text>
+  <text x="505" y="163" text-anchor="middle" font-size="9" fill="#B06000">W_2^A (d x c)</text>
+  <text x="505" y="178" text-anchor="middle" font-size="9" fill="#B06000">f( )</text>
+  <text x="505" y="193" text-anchor="middle" font-size="9" fill="#B06000">W_2^B (c x d)</text>
+  <text x="505" y="213" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">= v_2</text>
+
+  <!-- Plus + dots -->
+  <text x="565" y="175" text-anchor="middle" font-size="20" font-weight="700" fill="#5F6368">+ ...</text>
+
+  <rect x="620" y="120" width="90" height="100" rx="6" fill="#FBBC04" opacity="0.15" stroke="#F9AB00" stroke-width="1"/>
+  <text x="665" y="145" text-anchor="middle" font-size="10" font-weight="600" fill="#E37400">Expert n</text>
+  <text x="665" y="163" text-anchor="middle" font-size="9" fill="#B06000">W_n^A (d x c)</text>
+  <text x="665" y="178" text-anchor="middle" font-size="9" fill="#B06000">f( )</text>
+  <text x="665" y="193" text-anchor="middle" font-size="9" fill="#B06000">W_n^B (c x d)</text>
+  <text x="665" y="213" text-anchor="middle" font-size="9" font-weight="600" fill="#E37400">= v_n</text>
+
+  <!-- Sum result -->
+  <rect x="440" y="240" width="200" height="30" rx="6" fill="#34A853" opacity="0.15" stroke="#34A853" stroke-width="1"/>
+  <text x="540" y="260" text-anchor="middle" font-size="11" font-weight="600" fill="#137333">y = v_1 + v_2 + ... + v_n</text>
+
+  <!-- Key insight -->
+  <rect x="340" y="290" width="400" height="35" rx="6" fill="#FEF7E0" stroke="#F9AB00" stroke-width="1"/>
+  <text x="540" y="312" text-anchor="middle" font-size="11" font-weight="600" fill="#E37400">c = D/n，每个 Expert 计算量 = 原 FFN 的 1/n</text>
+
+  <!-- Bottom annotation -->
+  <text x="400" y="375" text-anchor="middle" font-size="10" fill="#5F6368">MoE 不是凭空发明的架构，而是 Dense 模型内部天然蕴含的分块结构</text>
+</svg>
