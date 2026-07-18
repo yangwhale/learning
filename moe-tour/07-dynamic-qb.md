@@ -88,6 +88,8 @@ $$\beta \leftarrow \lambda \cdot \beta_{\text{old}} + (1-\lambda) \cdot \beta_{\
 
 苏剑林的实验中 λ=0.9（保留 90% 历史信息）。顺序仍然关键：先用旧 β 做激活决策，再更新 β。
 
+> **后见之明（来自 [第 8 篇](08-forced-sequence-balance.md)）**：这里的 EMA 是在 batch 间做的——每个 batch 更新一次 β，β 在 batch 间平滑演化。但如果同一 batch 中的不同序列有截然不同的 expert 偏好（比如代码 vs 文学），全局 β 就无法精准适配每条序列。第 8 篇的 MQB 把 EMA 推进到**序列维度**：不直接对 β 做 EMA，而是对打分的**直方图分布**做 EMA，然后从平滑后的分布中重新求分位数。这样 β 可以随序列内容因果地动态调整。可以理解为：本篇的 EMA 是"跨 batch 的时间平滑"，MQB 的 EMA 是"沿序列的空间平滑"——两种平滑解决不同粒度的过拟合问题。
+
 ![一步 Quantile vs 交替迭代](assets/07-one-step-quantile.svg)
 
 ### 4.4 Expert Choice 的 Bias 修复
@@ -181,6 +183,8 @@ TensorCore 100% 专注于：
 
 动态 QB 的操作全部是 SparseCore 擅长的小规模排序和比较——而 Top-K QB 的 α-β 交替迭代涉及更大的矩阵操作，offload 效率更低。
 
+> **后见之明（来自 [第 8 篇](08-forced-sequence-balance.md)）**：MQB 把 QB 推广到序列维度后，SparseCore 的 offload 价值更大：直方图分桶、EMA 更新、从分布求分位数——这些操作都是 SparseCore 擅长的小规模计算。而且 MQB 的直方图维度固定（分桶数固定），是纯静态 shape 操作，对 XLA 编译完全友好。可以说 SparseCore + MQB 是 TPU v7 上 MoE 路由的理想组合。
+
 ### 6.4 从 GShard 到动态 QB 的 TPU 训练演进
 
 我们知识库中记录了完整的演进路径：
@@ -239,6 +243,8 @@ Top-K QB (第 6 篇)
 
 动态 QB 完全免除了推理时的排序：只需要一个 element-wise 减法和一个逐元素比较。训练时虽然仍需要一次 quantile 操作来更新 β，但可以 offload 到 SparseCore 或用 EMA 分摊到多个 step。
 
+> **后见之明（来自 [第 9 篇](09-gate-normalization.md)）**：动态 QB 的 `s - β > 0` 决策依赖于 s 的来源，而 s 的来源正是门控函数 ρ。第 9 篇证明了一个有趣的结论：对于 Sigmoid 门控（DeepSeek V3 路线），s 天然无界，β 的分位数求解数值稳定；对于 Softmax 门控，s 归一化后被压缩到 [0,1]，不同 expert 打分的区分度降低，β 的调节精度可能受影响。这解释了为什么 DeepSeek V3 选择 Sigmoid + Loss-Free（≈ 动态 QB 的 SignSGD 近似）：**Sigmoid 的无界性与 QB 的分位数框架天然契合**。
+
 ### 7.2 Expert Choice 因果律问题的优雅解决
 
 Expert Choice 的因果律问题一直是 MoE 社区的痛点：
@@ -291,8 +297,9 @@ Expert Choice 的因果律问题一直是 MoE 社区的痛点：
 
 ### 8.2 前瞻
 
+- **第 8 篇**将把均衡从 batch 级推广到序列级。本文的 β 全局共享，保证了全局均衡，但一条代码序列和一条诗歌序列可能把 token 涌向完全不同的 expert。MQB（Moving Quantile Balancing）用直方图近似 + 因果 EMA 解决这个问题，核心思想是：不对 β 做 EMA，而是对打分的分布做 EMA，再从分布求分位数——这比直接 EMA β 更精确，因为分布保留了形状信息。
+- **第 9 篇**讨论门控归一化——动态 QB 的 `s - β > 0` 决策中，s 的来源（Softmax/Sigmoid/ReLU）是一个正交选择。第 9 篇从概率论第一性原理推导出 ρ 应满足的条件，结论是"先归一化"（Softmax）理论最优，但"不归一化"（Sigmoid）在工程上更友好——QB 的 β 框架与门控函数选择完全解耦，不受影响。
 - **番外篇**将讨论 DeepSeek V4 的 Hash Routing——一种完全不同的思路：直接用哈希函数决定路由，彻底消除 router 参数。
-- **第 8 篇**将把均衡从 batch 级推广到序列级——发现 batch 级均衡可能导致某些序列内部的极度不均。
 
 ## 九、概念速查表
 
@@ -325,6 +332,8 @@ Expert Choice 的因果律问题一直是 MoE 社区的痛点：
   - 对比 MaxText 当前的 capacity_factor 方案：从 ~33% 算力浪费降为 0%
 
 从第 4 篇的直觉到第 7 篇的精确解，苏剑林用三篇文章（4→6→7）完成了从 "有感觉" 到 "能证明" 的跨越。而第 7 篇的简洁——一步 quantile 即最优——证明了好的理论终究会通向简单的解。
+
+但故事还没结束——动态 QB 的 β 仍然是全局的（全 batch 共享），[第 8 篇](08-forced-sequence-balance.md)将把均衡粒度从 batch 推进到序列（MQB），[第 9 篇](09-gate-normalization.md)则从正交方向回答"门控函数 ρ 本身应该怎么设计"。三条线——均衡算法（QB）、均衡粒度（MQB）、门控设计（第 9 篇）——合在一起，构成了 MoE 路由的完整理论图景。
 
 ---
 

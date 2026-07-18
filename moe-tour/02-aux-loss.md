@@ -51,6 +51,8 @@ STE 的处理：`F → P + sg[F - P]`（sg = stop gradient）
 - 前向传播时：`P + sg[F - P]` = `P + (F - P)` = **F**（真实值不变）
 - 反向传播时：sg 部分梯度为零，只剩 **P** 的梯度（可导）
 
+> **后见之明**：苏剑林在第 9 篇中从概率论第一性原理重新推导了 MoE 梯度，发现 STE 实际上是 REINFORCE 梯度估计器的 Taylor 近似。完整推导链是：REINFORCE（方差太大）→ Baseline 减方差 → Taylor 展开 → STE（本文使用的）。所以 STE 不是一个"技巧"，而是有严格的概率论根基。但它引入的 Stop Gradient 是一个理论瑕疵——第 9 篇通过将 Expert 定义改为 p_i·e_i 消除了这个瑕疵。
+
 ## 三、核心推导：从直觉到 GShard
 
 ![STE 推导过程](assets/02-ste-aux-loss-derivation.svg)
@@ -208,7 +210,13 @@ expert_input = pad_to_capacity(tokens, capacity)  # 不足补零
 
 Aux Loss 的根本局限在于：**它修改了模型的梯度**。不管 STE 替换做得多巧妙，`α · ∇L_aux` 这个梯度项总会干扰主任务的学习。expert 数量越多、α 越大，干扰越严重。
 
-下一篇（#3 换个思路来分配）会介绍 DeepSeek 的 **Loss-Free** 方案——它完全不动模型梯度，而是在 Router 输出上加 bias 来调整排序。这是第二代负载均衡方案。
+从后续系列的高度回看，Aux Loss 的问题可以分成三个层面，后续文章分别给出了解答：
+
+1. **参数冲突** → #3 Loss-Free 解决：用独立的偏置 b 承担均衡，主梯度零干扰
+2. **超参数依赖** → #6 Quantile Balancing 解决：线性规划对偶给出精确解，无超参数
+3. **STE 近似的理论不完美** → #9 门控归一化之争解决：用概率框架推导出 p_i·e_i 形式，消除 Stop Gradient
+
+下一篇（#3 换个思路来分配）先解决第一个问题——DeepSeek 的 **Loss-Free** 方案完全不动模型梯度，用偏置向量隔离均衡和学习。
 
 ## 七、关键数学符号速查
 
