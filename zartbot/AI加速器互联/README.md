@@ -1721,3 +1721,77 @@ GIN 用 **Team**（`ncclTeam`）来指定「这次通信在哪个范围内做」
 ---
 
 📖 **第十章完**。NCCL Gin & Symmetric Memory 地基篇，从「为什么要设备发起」一路拆到「两条腿怎么拼成一个 Hybrid AlltoAll」，中间过了对称 VA 三步拼装、LSA 机内直写、LLA2A 原子写、GIN 跨机 put。这套地基撑起了本文前九节的 DeepEPv2。
+
+---
+
+## 十一、总纲：从 NCCL 到 DeepEP 到 Hybrid —— 一条演进线
+
+> 换个「演进史」的角度，把前面十章串成一条线。一句话定调：**DeepEP 的出现，是因为通用的 NCCL 对 MoE 这种通信模式「太粗」了，DeepSeek 自己下场写了一个专用的。**
+
+### 11.1 原来 NCCL 怎么做 MoE 通信，缺点在哪
+
+NCCL 是 NVIDIA 的集合通信库，给你的是一套**通用**原语——AllReduce、AllGather、ReduceScatter、AllToAll。MoE 的 dispatch/combine，本质就是一个 **AllToAll**：每张卡都要按 router 的结果，把不同的 token 发给不同卡上的 expert，算完再收回来。
+
+问题是这个通用 AllToAll 用在 MoE 上有**四个硬伤**：
+
+1. **通信要占 SM**——NCCL 传统上用 GPU 的 SM（计算核心）去驱动通信 kernel，通信和计算互相抢资源，没法真正 overlap。
+2. **CPU 在关键路径**——老 NCCL 是 host-initiated，每次通信都要绕回 CPU 去 launch。小消息、细粒度的 MoE 场景，CPU launch 开销占比大，延迟难看。
+3. **太通用，不懂 MoE 的特殊性**——MoE 的 token 数量是动态的（取决于 router 怎么分）、还要随数据带一堆路由元信息（topk_idx / topk_weight / 源地址）。通用 API 对这些一律不管。
+4. **对两层拓扑不敏感**——机内是 NVLink、机器之间是 RDMA，带宽差一个数量级。通用 collective 不会自动帮你做「同一份数据跨机只发一次、落地了再用机内 NVLink 转发」这种分层省带宽的活。
+
+> **类比**: NCCL 像一家「通用快递公司」，同城、跨城、大件、小件都用同一套标准流程。对偶尔寄件的人够用；但你要是天天有海量、规格特殊的货（MoE 通信），这套通用流程就处处别扭。
+
+### 11.2 DeepEP 的变革 + 优缺点
+
+DeepEP 是 **DeepSeek 开源的、专门做 MoE EP 通信的库**。它不做通用 collective，只专心做 dispatch 和 combine 这一件事，但做到极致。
+
+**四个变革**：
+
+1. **拓扑感知的两层分发**——机内走 NVLink、跨机走 RDMA，且「同一份数据跨机只发一次，落地后机内 NVLink 转发」，省跨机带宽（对应第五节 Forward Warp）。
+2. **通信-计算 overlap**——专门的 warp 分工，甚至有零占 SM 的路子（AGRS 用 DMA copy engine），让通信藏在计算后面。
+3. **分两种模式**——normal（高吞吐，给训练 / prefill）和 low-latency（低延迟，给 decode），对着 MoE 推理的两个阶段分别调。
+4. **设备发起（device-initiated）**——GPU 在 kernel 里自己发通信，CPU 不在关键路径。
+
+| | 优点 | 缺点 |
+|---|---|---|
+| **专用** | 针对 MoE 极致优化，吞吐 + 延迟都甩通用 NCCL AllToAll 一大截 | 只服务 MoE dispatch/combine，不是万能 |
+| **底层** | 直接吃硬件能力（对称内存 / RDMA atomic / DMA engine） | 挑硬件、挑驱动、挑依赖库 |
+| **手写** | 灵活，能做任意不规则访问模式 | 弱内存模型下人工管 barrier/signal，复杂、难维护、易踩 race bug |
+
+### 11.3 DeepEP v1 → v2：换地基 + 扩原语
+
+v1 到 v2 最关键的一步是**换地基**：
+
+- **v1 底层用 NVSHMEM**——NVIDIA 另一套 shared memory 通信库，属于额外依赖。
+- **v2 底层换成 NCCL Gin**——NCCL v2.28 那套 Device API（GPU-Initiated Networking）。NVIDIA 把「设备发起」直接做进了官方 NCCL，更主流、更好维护；而且 Gin 给一套统一抽象——**一张对称虚拟地址，配两条腿**：机内走 LSA、跨机走 GIN（对应第十章）。
+
+除了换地基，v2 还**扩了原语**：除了 dispatch/combine，又加了 pipeline 的 **PP**、分布式 KV 存储的 **Engram**、零占 SM 的 **AGRS**（对应第四节）。
+
+> **一句话**: v2 = 换了更稳的地基（NVSHMEM → NCCL Gin）+ 加盖了更多楼层（PP / Engram / AGRS）。
+
+### 11.4 Hybrid 到底是什么？跟 DeepEP 什么关系？
+
+**这里要把概念摆正**：Hybrid **不是**另一个库、**不是**别人做的东西。它就是 DeepEP 里 dispatch/combine 的**一种模式**，是 DeepSeek 自己的 DeepEP 的一部分。
+
+DeepEP 有两种工作模式（对应第五节 Direct vs Hybrid 表）：
+
+- **Direct**：单层的。适合单机 8 卡，或者多机但压成一个扁平域来用。
+- **Hybrid**：两层的。也就是第十章那节讲的「两条腿」——机内走 NVLink（LSA）、跨机走 RDMA（GIN），中间还有 Forward Warp 负责把跨机收来的数据在机内转发。多机大规模跑 MoE，走的就是 Hybrid。
+
+> **怎么记**: DeepEP 是 DeepSeek 做的专用 MoE 通信库，是**产品名**；Hybrid 是它内部应对多机两层网络那个工作**模式的名字**，不是独立产品。你听到「Hybrid EP」，指的就是 DeepEP 开了 Hybrid 模式在多机上跑，还是同一个 DeepSeek 的东西。
+
+### 11.5 一条线串起来
+
+```
+通用 NCCL          →   DeepEP (DeepSeek)   →   v1 → v2         →   Hybrid 模式
+太粗 / 占 SM /          专用 / 设备发起 /       换地基            多机两层：
+CPU 在关键路径 /        拓扑分层 /              NVSHMEM→NCCL Gin  机内 NVLink +
+不懂 MoE /             通信计算 overlap /      + 扩原语          跨机 RDMA
+不懂两层网络           训练/推理两种模式        (PP/Engram/AGRS)  (DeepEP 的一副面孔)
+```
+
+> **TPU 对照收尾**: GPU 这条线的本质，是「用户手写通信换极致灵活」——从 NVSHMEM 到 NCCL Gin，从 Direct 到 Hybrid，每一步都是程序员在弱内存模型上亲手编排发送、同步、可见性。TPU 走的是另一条路：把这一切塞进 XLA 编译期，你只写一行 `jax.lax.all_to_all`，剩下编译器保证正确性和拓扑映射。**灵活 vs 省心，这就是两条技术路线最根本的分野。**
+
+---
+
+📖 **全文完**。本文从 DeepEPv2 的上层设计（前九章）一路挖到 NCCL Gin 的底层地基（第十章），最后用一条演进线（第十一章）把「为什么会有 DeepEP、它变革了 NCCL 什么、v1→v2 改了什么、Hybrid 是什么」串成整体。
