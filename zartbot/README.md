@@ -8,6 +8,32 @@
 
 ---
 
+## 🔟 Top 10 必读推荐
+
+> 按对 AI Infra 工程师的价值排序。读完一篇可移到「已读」区，空位补入新推荐。
+
+| # | 文章 | 推荐理由 |
+|---|------|----------|
+| 1 | [DeepEPv2分析(1)](AI加速器互联/DeepEPv2分析(1).md) | MoE EP 通信核心机制，理解 dispatch/combine kernel 设计 |
+| 2 | [分析一下EP并行和DeepSeek开源的DeepEP代码](大模型架构/分析一下EP并行和DeepSeek开源的DeepEP代码.md) | EP 并行源码级解读，直接对标 TPU 推理的 sharding 策略 |
+| 3 | [NCCL Gin & Symmetric Memory](AI加速器互联/NCCL Gin & Symmetric Memory.md) | 集合通信最新优化，AllGather/ReduceScatter 底层机制 |
+| 4 | [谈谈2026年ScaleUP标准的变化](AI加速器互联/谈谈2026年ScaleUP标准的变化.md) | UALink/ESUN 标准演进，理解 GPU 互联趋势对 TPU ICI 的参考 |
+| 5 | [Blackwell TensorCore架构](GPU架构演化史/Blackwell TensorCore架构.md) | FP8/TMA/Warp Group 设计，对比 TPU v7 MXU 的取舍 |
+| 6 | [RDMA这十年的反思4: 从DeepSeek的3FS和DeepEP谈起](RDMA/RDMA这十年的反思4- 从DeepSeek的3FS和DeepEP谈起.md) | RDMA 在 AI 训练的实际问题，对比 Google Falcon 方案 |
+| 7 | [谈谈Google Falcon的可靠传输论文并对比分析CIPU eRDMA](RDMA/谈谈Google Falcon的可靠传输论文并对比分析CIPU eRDMA.md) | Google 自家网络论文的外部视角分析，知己知彼 |
+| 8 | [从DeepSeek MoE专家负载均衡谈起](大模型架构/从DeepSeek MoE专家负载均衡谈起.md) | Aux Loss/Loss-Free/动态激活，MoE routing 核心问题 |
+| 9 | [详细谈谈Rubin + Groq 3 LPU架构](GPU架构演化史/详细谈谈Rubin + Groq 3 LPU架构.md) | NV 下一代架构 + LPU 整合，竞品情报 |
+| 10 | [DeepSeek-V4详细分析(1): 算法和模型结构](大模型架构/DeepSeek-V4详细分析(1)- 算法和模型结构.md) | MegaMoE 架构，512+ expert 的 sharding 和推理挑战 |
+
+<details>
+<summary>📚 已读 (读完后移到这里)</summary>
+
+_暂无_
+
+</details>
+
+---
+
 ## AI
 
 ### 大模型架构 (55 篇)
