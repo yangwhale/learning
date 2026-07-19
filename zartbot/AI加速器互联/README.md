@@ -1115,3 +1115,609 @@ combine_reduce(..., 回调 = flush_last_tma_and_issue_rdma)
 | warpgroup 寄存器再分配 | dealloc 40 / alloc 216 | VMEM 编译期静态分配 | Hopper 动态资源调度，TPU 无对应 |
 | flush_last 双缓冲 overlap | reduce 回调塞 RDMA | XLA latency-hiding | kernel 内 compute-comm 重叠，手动 vs 自动 |
 | Hierarchical combine | NVLink 汇聚+RDMA 回源 | ICI reduce+DCN reduce-scatter | 两层 reduce 同构 |
+
+---
+
+## 十、番外：NCCL Gin & Symmetric Memory —— DeepEPv2 底下的地基
+
+> 前面九节讲的是 DeepEPv2 这栋楼。这一节往下挖，看它踩的**地基**：`Symmetric Memory`（对称内存）和 `NCCL Gin`（GPU 主动发起的网络通信）。第 1 篇里我们说过「V2 把底层从 NVSHMEM 换成了 NCCL Gin」——换的就是这块地基。把地基夯实，回头看上层的 dispatch/combine 会通透很多。
+> **原文**: [NCCL Gin & Symmetric Memory](NCCL Gin & Symmetric Memory.md)（DeepSeek V4 番外篇）
+
+### 10.1 为什么要「设备发起」通信？
+
+传统 GPU 通信是**主机发起模型**（host-initiated）：CPU 当指挥，每做一次通信，都要 CPU 启动一个通信 kernel、做一次 Host↔Device 同步。NCCL、MPI 都是这个路子——基于**消息传递**（message passing）的松耦合模式。
+
+问题出在**计算和通信要贴身融合**的场景（EP 并行、JAX/Triton 编译器生成的通信）。这类场景里，通信是算到一半临时要发的，如果每次都回到 CPU 绕一圈，那点 CPU 协调开销就成了瓶颈。
+
+> **类比**: 主机发起模型像「厨师每切一刀菜，都要跑去问经理『下一步干啥』」。经理（CPU）和后厨（GPU）之间来回跑腿的时间，比切菜本身还久。设备发起模型（device-initiated）是「把菜谱直接给厨师，让他自己一口气做完」——GPU 线程在 kernel 里**自己**发起网络通信，不回 CPU。
+
+推动这件事的有三股力：
+1. **NVSHMEM 先蹚了路**——证明了 GPUDirect Async Kernel-Initiated（GDA-KI）可行，DeepEP V1 就用它。
+2. **NVL72 超节点出现**——传统 NCCL 在 NVLink 上延迟和开销都太大，且 DeepEP 生态搞出一堆通信库，维护多个库很烦。于是 **NCCL 从 v2.28 开始支持 Device API**，让 GPU 线程能在 kernel 里直接发网络通信，这就是 **Gin（GPU-Initiated Networking）**。
+3. **两个愿景**——DeepSeek 想统一 ScaleUP/ScaleOut 的语义复杂性；PyTorch 想把一整个 GPU 集群编程成「一个拥有海量内存的巨型 GPU」。
+
+> **TPU 对比**: TPU 上根本没有「主机发起 vs 设备发起」这个纠结。XLA 编译器在编译期就把集合通信排进计算图，`all-gather`/`reduce-scatter` 是编译器生成的算子，天然和计算重叠，没有运行时回 CPU 的开销。GPU 这套 Gin 本质上是在**用软件手工补齐 TPU 编译器免费给的东西**。
+
+### 10.2 什么是 Symmetric Memory（对称内存）？
+
+核心思想借自 HPC 的 **PGAS**（Partitioned Global Address Space，分区全局地址空间）：一个分布式系统里，所有执行单元共享一块 global 地址空间，这块空间又被切成若干块分给每个单元。
+
+具体到 GPU：**每个 GPU 都在相同的虚拟地址空间里分配内存**，任意 GPU 可以根据别人的 rank 编号，算一个 offset 就访问到那个 GPU 的内存。它有两个关键性质：
+
+- **对称性**：所有进程里，这块内存的 VA 大小和布局**完全一致**——给开发者一个统一的编程视角。
+- **语法统一**：访问本地显存 vs 访问远程 GPU 的显存，无论远端是走 NVLink 还是走 RDMA，**代码写法完全相同**，底层复杂性被屏蔽。
+
+于是设备端内核访问 peer `x` 的同名内存，就是一句纯算术：
+
+```
+peer 地址 = lsaFlatBase + x * bigSize + bigOffset + 用户offset
+            └ 统一基址 ┘  └ 第几个 rank ┘ └ 这块 window 的偏移 ┘
+```
+
+> **类比**: 这就是第二节讲 DeepEPv2 时那个「**圆桌伸手**」的正式版。8 个人坐一张圆桌，桌面切成 8 块**布局完全一样**的区域。你要在 3 号位的区域写字，不用喊他、不用传纸条——手往「我的位置 + 3 个身位」一伸就到了。Symmetric Memory 就是把这张圆桌的坐标系数学化：`基址 + rank×步长 + 偏移`。
+
+> **TPU 对比**: 这正是 TPU 程序员**习以为常**的世界。`jax.sharding` 里你声明一个 `Mesh`，数组自动按 mesh 分片，访问哪个分片由 XLA 算——你从来不用手写「基址 + rank×步长」。GPU 的 Symmetric Memory 是在**手动搭一套 TPU 早就内建的对称寻址模型**。
+
+### 10.3 一张地址，两条腿：LSA vs GIN
+
+对称内存给了「统一的地址视图」，但**底层真要搬数据时，语义并不统一**——这是全文最重要的一个分野，务必记牢：
+
+| | LSA (Load Store Access) | GIN (GPU-Initiated Networking) |
+|---|---|---|
+| 用于 | 同节点内 peer（NVLink/PCIe P2P） | 跨节点 peer（RDMA ScaleOut） |
+| 语义 | **内存语义**：直接 `LD`/`ST` 读写对端显存 | **消息语义**：`put`/`get` 发 RDMA 请求 |
+| 怎么发 | 一条访存指令，硬件直达 | 构造 RDMA WQE 敲门铃 / 写描述符给 CPU 代理 |
+| 对应维度 | scaleup（第 8 节的 `ncclTeamTagLsa`） | scaleout（第 8 节的 `ncclTeamTagRail`） |
+
+一句话总结：**Symmetric Memory 让「算地址」这件事统一了，但「搬数据」这件事仍然分两条腿走**。机内伸手直接抓（LSA），跨机得发快递（GIN）。
+
+<details>
+<summary>🔧 SVG 架构图：一张对称 VA，两条搬运腿（LSA / GIN）</summary>
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" font-family="system-ui, sans-serif">
+  <rect width="840" height="500" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">一张对称 VA，两条搬运腿</text>
+  <text x="420" y="56" text-anchor="middle" font-size="12" fill="#757575">算地址统一（Symmetric Memory）· 搬数据分家（LSA 内存语义 / GIN 消息语义）</text>
+
+  <!-- Node 0 -->
+  <rect x="30" y="80" width="360" height="180" fill="#E3F2FD" stroke="#1565C0" stroke-width="2" rx="10"/>
+  <text x="210" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#0D47A1">节点 0（NVLink 域 = LSA Team）</text>
+  <rect x="55" y="120" width="140" height="110" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="125" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565C0">GPU 0（本卡）</text>
+  <rect x="65" y="152" width="120" height="20" fill="#BBDEFB"/>
+  <rect x="65" y="174" width="120" height="20" fill="#E1F5FE"/>
+  <rect x="65" y="196" width="120" height="20" fill="#E1F5FE"/>
+  <text x="125" y="167" text-anchor="middle" font-size="9" fill="#0D47A1">对称 VA 布局</text>
+  <rect x="215" y="120" width="140" height="110" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="285" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565C0">GPU 1（同节点 peer）</text>
+  <rect x="225" y="152" width="120" height="20" fill="#E1F5FE"/>
+  <rect x="225" y="174" width="120" height="20" fill="#BBDEFB"/>
+  <rect x="225" y="196" width="120" height="20" fill="#E1F5FE"/>
+  <text x="285" y="167" text-anchor="middle" font-size="9" fill="#0D47A1">同样的布局</text>
+  <!-- LSA arrow -->
+  <line x1="195" y1="184" x2="215" y2="184" stroke="#2E7D32" stroke-width="4"/>
+  <polygon points="215,184 207,180 207,188" fill="#2E7D32"/>
+  <text x="210" y="250" text-anchor="middle" font-size="11" font-weight="bold" fill="#2E7D32">LSA：一条 LD/ST 指令直接读写对端显存</text>
+
+  <!-- Node 1 -->
+  <rect x="450" y="80" width="360" height="180" fill="#FCE4EC" stroke="#C62828" stroke-width="2" rx="10"/>
+  <text x="630" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#B71C1C">节点 1（跨网卡 = GIN 域）</text>
+  <rect x="475" y="120" width="140" height="110" fill="white" stroke="#EF5350" rx="6"/>
+  <text x="545" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#C62828">GPU 8（远端 peer）</text>
+  <rect x="485" y="152" width="120" height="20" fill="#F8BBD0"/>
+  <rect x="485" y="174" width="120" height="20" fill="#FCE4EC"/>
+  <rect x="485" y="196" width="120" height="20" fill="#FCE4EC"/>
+  <text x="545" y="167" text-anchor="middle" font-size="9" fill="#B71C1C">同样的对称布局</text>
+  <text x="700" y="180" text-anchor="middle" font-size="10" fill="#B71C1C">地址算法一样，</text>
+  <text x="700" y="196" text-anchor="middle" font-size="10" fill="#B71C1C">但搬运方式不同</text>
+
+  <!-- GIN arrow across nodes -->
+  <line x1="390" y1="170" x2="450" y2="170" stroke="#E65100" stroke-width="4" stroke-dasharray="8,4"/>
+  <polygon points="450,170 442,166 442,174" fill="#E65100"/>
+  <text x="420" y="290" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">GIN：构造 RDMA WQE / 写 GFD 给 CPU 代理 → put/get 发消息</text>
+
+  <!-- unified address formula -->
+  <rect x="30" y="310" width="780" height="66" fill="#FFFDE7" stroke="#F9A825" stroke-width="1" rx="6"/>
+  <text x="45" y="332" font-size="12" fill="#F57F17">💡 统一的地址算法（两条腿共用）：</text>
+  <text x="45" y="354" font-size="12" fill="#795548" font-family="monospace">peer 地址 = lsaFlatBase + peer × bigSize + bigOffset + userOffset</text>
+  <text x="45" y="370" font-size="10" fill="#8D6E63">→ 无论 peer 在机内还是跨机，算法完全一样；差别只在「拿到地址之后怎么搬」。</text>
+
+  <!-- TPU comparison -->
+  <rect x="30" y="386" width="780" height="96" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="45" y="408" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="428" font-size="11" fill="#37474F">TPU 也有两条腿：ICI（芯片间 mesh，对应 LSA/scaleup）+ DCN（跨 slice，对应 GIN/scaleout）。</text>
+  <text x="45" y="446" font-size="11" fill="#37474F">但两条腿的「搬数据」都由 XLA 编译器统一生成 collective 算子，程序员看到的只有一个 all-gather。</text>
+  <text x="45" y="464" font-size="11" fill="#37474F">GPU 这里 LSA/GIN 双语义要开发者显式区分——这正是 DeepSeek 抱怨的「ScaleUP/ScaleOut 语义复杂性」。</text>
+</svg>
+```
+
+</details>
+
+> **渣注（原作者的点睛）**: Symmetric Memory & Gin 只是把复杂通信包了个「统一对称地址」的糖衣，方便写并行算子。底层执行依然很脏——Gin 要么构造 RDMA WQE（GDA-KI 模式），要么构造 GFD 描述符（Proxy 模式）；再叠加 GPU 内部 TMA 的 Async Proxy、直接 LD/ST、RDMA 同步，整体极其复杂。作者原话：「**RDMA 并不是一个对 GPU 友好的接口**」。未来的硬件方向是把 ScaleOut 网卡接进 ScaleUP 域，软件层彻底消除 LSA/GIN 双语义。
+
+> **本波小结**: 记住三件事——(1) 为什么要设备发起：省掉计算中途回 CPU 的开销；(2) Symmetric Memory 是什么：对称的 flat VA，算地址靠 `基址+rank×步长+偏移`；(3) 一张地址两条腿：机内 LSA 走内存语义（LD/ST 直达），跨机 GIN 走消息语义（RDMA put/get）。下一波我们钻进 **10.4 统一抽象**——这张对称 VA 到底是怎么用 `cuMem` 一块块拼出来的，以及 window 注册干了什么。
+
+### 10.4 统一抽象：对称 VA 是怎么拼出来的
+
+上一波说「算地址就是 `基址 + rank×步长 + 偏移`」。但这个「基址一致、步长一致、偏移一致」不是天上掉下来的，得手工搭。这一波拆三步：**分内存 → 记账保证对称 → 注册成 window**。
+
+#### 第一步：为什么不能用 `cudaMalloc`，要用 `cuMem`
+
+平时分显存用 `cudaMalloc`，但它有个致命缺陷：**它给你的地址是「私有」的，别的 rank 根本导不出、也 map 不进来**。
+
+对称内存必须用 `cuMem` 系列 API，它的关键是**把「物理内存」和「虚拟地址」解耦**成四步：
+
+```
+cuMemCreate         → 分配物理页（拿到一个可导出的 handle）
+cuMemAddressReserve → 预留一段虚拟地址（VA）
+cuMemMap            → 把 VA 映射到物理页
+cuMemSetAccess      → 开放读写权限
+```
+
+关键在第一步产出的那个 **handle（句柄）**：只有 `cuMem` 分配的物理段，才能用 `cuMemExportToShareableHandle` 导出，交给别的 rank 用 `cuMemImportFromShareableHandle` + `cuMemMap` 映射到**同一个地址**。`cudaMalloc` 出来的 buffer 没有这种可导出的句柄。
+
+> **类比**: `cudaMalloc` 像「租一间精装公寓」——能住，但房子和地址是绑死的私有物，你没法把「同一个门牌号」共享给别人。`cuMem` 像「先买地皮（物理页），再单独申请门牌号（VA），再把门牌挂到地皮上」——三件事分开办。好处是那张「地契（handle）」可以复印给邻居，邻居就能在自己那边挂一块**一模一样门牌号**的地皮。这就是跨 rank 同地址的来源。
+
+#### 第二步：`bigSpace` 记账器——对称性到底哪来的
+
+这是全节最精妙的地方。「所有 rank 拿到相同的 `bigOffset`」怎么保证？答案出乎意料地朴素：**用一个纯 CPU 端的整数分配器记账**。
+
+- 每个 rank 在「全局对称视图」里占一段固定大小的 VA 窗口，叫 `bigSize`（比如按 4GB 对齐、取所有 rank GPU 显存的最大值）。
+- 分配时并不真去碰物理 VA，只在一个叫 `bigSpace` 的**整数线段分配器**上「切一刀」，返回一个相对偏移 `bigOffset`。
+- 精髓在这句：**所有 rank 都按相同顺序调用同一套注册流程**，`bigSpace` 是**确定性演化**的——同样的输入、同样的顺序，每个 rank 独立算，必然得到**完全相同**的 `bigOffset`。不需要任何跨 rank 通信来对齐偏移量！
+
+> **类比**: 想象一场婚礼，1000 个宾客要排座位。笨办法是让一个人排好、再打电话通知每桌坐几号（要通信）。聪明办法是：**给每个人发一份一模一样的排座规则**（「按报名先后，每桌满 10 人换下一桌」），每个人自己一算就知道自己坐哪、也知道张三坐哪——**零沟通，结果却完全一致**。`bigSpace` 就是这份「排座规则」，它的确定性保证了对称性。
+
+#### 第三步：flat VA 布局 + 窗口注册
+
+物理段分好、偏移记好之后，`symMemoryObtain` 把本地和所有 peer 的同名物理内存，挂到一整片**连续的 flat VA** 上：
+
+```
+[ lsaFlatBase ]
+| rank 0 的 bigSize | rank 1 的 bigSize | ... | rank N-1 的 bigSize |
+        ↑                    ↑
+   +bigOffset            +bigOffset       ← 每个 rank 的同名 window 落在各自段里同样的偏移
+```
+
+于是设备端访问 peer `x` 只需一句纯算术：`lsaFlatBase + x*bigSize + bigOffset + userOffset`——**这就是 10.2 那条地址公式的物理来源**。
+
+用户侧的入口是 `ncclCommWindowRegister`：把一段显存 `(buff, size)` 注册成所有 rank「同一逻辑视图」的 **window**。为什么必须注册、不能拿裸指针直接用？三个原因：
+
+1. **对称 VA 统一视图**：裸 `cudaMalloc` 的地址各 rank 互不相关，注册后才建立 `lsaFlatBase` 统一布局。
+2. **物理句柄跨 rank 交换**：export / import / map 这套流程必须由 NCCL 用 bootstrap 集合操作完成，用户自己调不了。
+3. **多后端聚合注册**：同一块内存要同时在多条路上注册——LSA Team 内（`cuMemMap` P2P）、NVLS multicast（`cuMulticastBindAddr`）、GIN（RDMA 远端）、RMA Proxy（CPU 代理）。一次注册全搞定。
+
+最终产出一个设备端可见的 `ncclWindow_vidmem` 结构，里面装着 flat 基址、步长（`stride4G`）、多播偏移、GIN 句柄数组等——**这是设备 kernel 能访问内存的唯一通路**。所有这些句柄（LSA 的、GIN 的）最后都被打包进一个统一的 `ncclSymkDevComm`，kernel 启动时一把拿到。
+
+<details>
+<summary>🔧 SVG 架构图：cuMem 解耦 → bigSpace 记账 → flat VA 拼装</summary>
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 540" font-family="system-ui, sans-serif">
+  <rect width="840" height="540" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">对称 VA 的三步拼装</text>
+  <text x="420" y="54" text-anchor="middle" font-size="12" fill="#757575">物理/虚拟解耦 → CPU 端确定性记账 → flat VA 挂载</text>
+
+  <!-- Step 1: cuMem decouple -->
+  <rect x="30" y="74" width="780" height="118" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="8"/>
+  <text x="45" y="96" font-size="13" font-weight="bold" fill="#1B5E20">① cuMem：物理页 / 虚拟地址 解耦</text>
+  <rect x="55" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="130" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">cuMemCreate</text>
+  <text x="130" y="152" text-anchor="middle" font-size="9" fill="#558B2F">物理页 + 可导出 handle</text>
+  <rect x="235" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="310" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">AddressReserve</text>
+  <text x="310" y="152" text-anchor="middle" font-size="9" fill="#558B2F">预留 VA（门牌号）</text>
+  <rect x="415" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="490" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">cuMemMap</text>
+  <text x="490" y="152" text-anchor="middle" font-size="9" fill="#558B2F">门牌挂到地皮</text>
+  <rect x="595" y="110" width="190" height="60" fill="#FFF3E0" stroke="#FB8C00" rx="6"/>
+  <text x="690" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">Export handle → 邻居</text>
+  <text x="690" y="150" text-anchor="middle" font-size="9" fill="#EF6C00">Import + Map 到同一地址</text>
+  <text x="690" y="164" text-anchor="middle" font-size="9" fill="#EF6C00">← 跨 rank 同地址的根源</text>
+
+  <!-- Step 2: bigSpace bookkeeping -->
+  <rect x="30" y="204" width="780" height="120" fill="#FFF8E1" stroke="#F9A825" stroke-width="1.5" rx="8"/>
+  <text x="45" y="226" font-size="13" font-weight="bold" fill="#F57F17">② bigSpace：纯 CPU 端整数记账器（对称性的来源）</text>
+  <rect x="55" y="240" width="340" height="70" fill="white" stroke="#FBC02D" rx="6"/>
+  <text x="225" y="262" text-anchor="middle" font-size="11" font-weight="bold" fill="#795548">所有 rank 跑同一套注册流程、同一顺序</text>
+  <text x="225" y="282" text-anchor="middle" font-size="11" fill="#795548">→ bigSpace 确定性演化</text>
+  <text x="225" y="300" text-anchor="middle" font-size="11" fill="#795548">→ 各 rank 独立算出相同 bigOffset</text>
+  <rect x="425" y="240" width="360" height="70" fill="#FFFDE7" stroke="#FBC02D" rx="6"/>
+  <text x="605" y="262" text-anchor="middle" font-size="11" font-weight="bold" fill="#8D6E63">💡 婚礼排座：发同一份规则</text>
+  <text x="605" y="282" text-anchor="middle" font-size="10" fill="#8D6E63">每人自己一算就知道自己 &amp; 别人的座位</text>
+  <text x="605" y="300" text-anchor="middle" font-size="10" fill="#8D6E63">零沟通，结果却完全一致</text>
+
+  <!-- Step 3: flat VA -->
+  <rect x="30" y="336" width="780" height="118" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="8"/>
+  <text x="45" y="358" font-size="13" font-weight="bold" fill="#0D47A1">③ flat VA：所有 peer 的同名内存挂成一整片连续地址</text>
+  <rect x="55" y="372" width="170" height="48" fill="#BBDEFB" stroke="#1976D2" rx="4"/>
+  <text x="140" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 0 · bigSize</text>
+  <rect x="285" y="392" width="20" height="16" fill="#1565C0"/>
+  <text x="140" y="408" text-anchor="middle" font-size="8" fill="#1565C0">+bigOffset</text>
+  <rect x="225" y="372" width="170" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="310" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 1 · bigSize</text>
+  <rect x="395" y="372" width="170" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="480" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 2 · bigSize</text>
+  <rect x="565" y="372" width="220" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="675" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">... rank N-1 · bigSize</text>
+  <text x="420" y="440" text-anchor="middle" font-size="12" font-family="monospace" fill="#0D47A1">访问 peer x = lsaFlatBase + x*bigSize + bigOffset + userOffset</text>
+
+  <!-- TPU comparison -->
+  <rect x="30" y="466" width="780" height="62" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="45" y="486" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="505" font-size="11" fill="#37474F">TPU 的 HBM 地址映射、跨 chip 寻址由 runtime + XLA 在编译期确定，程序员零感知。GPU 这三步（解耦分配 /</text>
+  <text x="45" y="522" font-size="11" fill="#37474F">确定性记账 / flat 挂载）= 手工复刻 TPU runtime 免费做的「全局地址空间」建立过程。</text>
+</svg>
+```
+
+</details>
+
+> **本波小结**: 对称 VA 三步拼出来——(1) 用 `cuMem` 而非 `cudaMalloc`，因为它把物理页和 VA 解耦，还能导出句柄给别的 rank 挂同地址；(2) `bigSpace` 是个纯 CPU 端整数记账器，靠「所有 rank 跑同样流程 → 确定性演化」保证大家算出相同 `bigOffset`，**零通信实现对称**；(3) `ncclCommWindowRegister` 把裸内存注册成 flat VA 上的 window，同时在 LSA/NVLS/GIN/Proxy 多条路上聚合注册，产出设备端唯一入口 `ncclWindow_vidmem`。下一波进 **10.5 LSA**：机内这条腿具体怎么用 LD/ST 和 NVLink 多播搬数据、怎么做 barrier 同步。
+
+### 10.5 LSA：机内这条腿怎么搬数据
+
+先把名词摊开，别默认你知道：
+
+- **LSA** = **L**oad **S**tore **A**ccess（有的地方也写 Local Shared Access）。本质就一句话：**机内的 GPU 之间，直接用普通的访存指令（load / store）读写对方的显存**，靠 NVLink / NVSwitch 硬件直达，不用走任何软件通信协议。它是「一张地址两条腿」里的**机内那条腿**。
+- **NVLink** = NVIDIA 机内 GPU 之间的高速互联线（比 PCIe 快一个数量级）。**NVSwitch** = 把机内多张 GPU 全连起来的交换芯片。
+- **P2P** = Peer-to-Peer，指一张 GPU 能直接访问另一张 GPU 的显存，不用先拷回 CPU。
+
+有了对称 VA，LSA 搬数据简单到「就是普通访存」。三种地址算法：
+
+```
+本地指针      = lsaFlatBase + 本rank * stride + offset     // 读写自己
+peer 指针     = lsaFlatBase + peer   * stride + offset     // 读写第 peer 个 GPU  ← 核心
+多播指针      = mcBasePtr   + mcOffset + offset            // 一次写，广播给所有 GPU
+```
+
+算出 peer 指针后，读对端显存就是 `v = peerPtr[i]`，写对端显存就是 `peerPtr[i] = v`——**跟读写本地数组一模一样**，这就是对称内存最爽的地方。
+
+#### 普通 LD/ST vs NVLink 多播（NVLS）
+
+搬数据分两档。第一档是刚说的普通 `LD`/`ST`：一个一个 peer 地址去读、去写。
+
+第二档用上了 **NVLS**（NVLink Switch，也叫 NVLink SHARP）——**让交换机帮你干活**。有两条硬件指令（统称 `multimem` 指令族，意思是「操作多播内存」）：
+
+- **STMC**（`multimem.st`，store-multicast）：**一次写，广播给所有 GPU**。你发一份数据给 NVSwitch，交换机复制成 N 份，分发到所有 peer 的同一地址。
+- **LDMC**（`multimem.ld_reduce`，load-multicast-reduce）：**一次读，硬件顺手求和**。你下一条指令，交换机把所有 peer 对应地址的数据**在交换芯片里加总**，再把 reduced 结果返回给你。
+
+> **类比**: 普通 LD/ST 像「你要把同一份通知发给 8 个同事，得挨个走到工位放一张」。NVLS 的 STMC 像「你把通知交给前台广播，前台一次复印 8 份分发」——发一次就够。而 LDMC 更狠：「前台不光帮你收 8 个人的表格，还当场把 8 张表的数字加好总数再给你」——**求和在交换机硬件里完成**，GPU 一条指令就拿到聚合结果。老平台（没 NVSwitch SHARP，比如 RTX 6000 pro）用不了多播，只能退回挨个 unicast。
+
+> **TPU 对比**: LDMC 这种「网络里顺手做 reduce」，正是 TPU ICI 的看家本领——TPU 的 `all-reduce` 天生就是在 ICI mesh 上边传边加，硬件 reduce 是默认路径。GPU 要到 Hopper + NVSwitch SHARP 才补上这一课，而且还得程序员显式发 `multimem` 指令。TPU 上你写个 `jax.lax.psum`，XLA 自动就用了。
+
+#### LSA Barrier：怎么确认「大家都到齐了」
+
+搬完数据得同步——「我写完了，你能读了吗？」这就是 **barrier**（栅栏，一种「所有人到齐才放行」的同步）。这块其实第三节讲 DeepEPv2 时提过乒乓协议，这里看 NCCL 的正式实现，同样分两档，取决于平台支不支持多播：
+
+- **多播（multimem）模式**：`arrive`（我到了）用一条 `multimem.red.add` PTX 指令，硬件把「+1」多播到所有 rank 的同一个计数槽。因为 N 个 rank 同时 arrive，每个槽最终 `+N`，所以 `wait` 的条件就是「计数 ≥ 起点 + N」。**只需一个 leader 线程发指令**，交换机负责扩散。
+- **单播（unicast）模式**（老平台）：每个 rank 挨个往「对端的信箱」写「我到了 epoch+1」，`wait` 时并行盯着 N-1 个 peer 的信箱。多个线程分摊 N-1 个目标，负载均衡。
+
+这里冒出个关键词 **epoch**（轮次计数器）：barrier 会被同一块资源**连续多个 kernel 反复复用**，靠 epoch 区分「这是第几轮同步」。构造 barrier 时读回上次的 epoch，同步完析构时写回——这样下一个 kernel 接着用不串味。
+
+> **类比**: `epoch` 像地铁闸机的「本班次编号」。同一个闸机（barrier 资源）一趟趟地放人，靠班次号区分「这拨人属于哪一趟」，不会把上一趟没走完的人算进这一趟。多播模式像「闸机联网，一刷卡所有站点计数器同步 +1」；单播模式像「每个站点各自记数，你得挨个站点去问『你那到齐没』」。
+
+> **本波小结**: LSA = 机内 GPU 用普通 load/store 指令直接读写对方显存，靠 NVLink/NVSwitch 硬件直达。算出 peer 指针后读写跟本地数组一样。搬数据两档：普通 LD/ST 挨个搬；NVLS 多播让交换机代劳——STMC 一次写广播全员，LDMC 一次读还硬件求和（这正是 TPU ICI 的天生本事）。同步用 barrier，多播平台一条 `multimem.red.add` 全员 +1，老平台退回挨个写信箱；用 `epoch` 轮次号支持资源反复复用。下一波讲 LSA 上最精巧的一招——**LLA2A 低延迟 AllToAll**：怎么用一次 16B 原子写，同时把「数据」和「我发好了」的通知一起送到。
+
+### 10.6 LLA2A：一次原子写，数据和通知一起送
+
+先摊名词：
+
+- **A2A** = **A**ll-**to**-**A**ll，全交换。每个 GPU 都要给其他每个 GPU 发一块**各不相同**的数据（EP 的 dispatch/combine 本质就是 A2A）。
+- **LLA2A** = **L**ow-**L**atency **A**ll-to-**A**ll，低延迟全交换。NCCL 在 LSA 对称内存之上，专为**小消息、要快**的场景做的一个原语。
+- **uint4** = CUDA 里的 16 字节向量类型（4 个 32 位整数打包）。关键硬件事实：**NVLink 保证对 16B 的 store 是原子的**——要么 16 字节整块落地，要么没落地，不会出现「写了一半」。
+
+#### 问题：数据到了，怎么知道它「到齐了」？
+
+普通做法是「数据数组 + 一个单独的 flag 标志位」：先写数据，再写 flag，接收方轮询 flag。问题是这要两次写，而且还要小心「flag 比数据先到」的乱序 bug。
+
+LLA2A 的绝招：**把「8B 数据 + 标志」塞进同一个 16B 事务里，一次原子写同时完成「送数据」和「通知完成」**。格式是这样：
+
+```
+一个 16B slot (uint4) = { data_lo , epoch , data_hi , epoch }
+                          └─数据低8B─┘  └标志┘ └─数据高8B─┘ └标志┘
+                              x        y       z        w
+```
+
+数据被拆成低 8 字节和高 8 字节，**中间和末尾各夹一个 epoch 标志**（y 和 w 两份）。发送方一条 `st.relaxed.sys.v4.u32` 把这 16B 原子写到对端的 slot。
+
+接收方轮询时，判据极简：**只要 `y == epoch` 并且 `w == epoch`，就断定数据已完全可见**。为什么两份标志都要查？因为 16B 是原子写——如果**头尾两个标志都等于当前 epoch**，说明这一整块 16B 是作为一个整体落地的，中间夹的 data_lo/data_hi 必然是完整、配套的，不可能是上一轮的残留和这一轮的混搭。
+
+> **类比**: 传统「数据 + flag」像「先把包裹放你家门口，再单独打个电话说『包裹到了』」——两个动作，还可能电话比包裹先到（你去开门扑空）。LLA2A 像「包裹本身的封条上就印着今天的日期，而且**前后各贴一张**」。你一看包裹，前后封条都是今天的日期 → 立刻确定：包裹到了、而且是完整的、是今天这批的。**封条就是通知，不用再打电话**。前后两张封条是防调包——万一运输途中被拆换过，两张日期对不上你就能发现。
+
+> **为什么标志叫 epoch、还要前后两份**: `epoch`（轮次号）每轮 +1，用来区分「这是第几批数据」。夹两份是利用 16B 原子性做**自校验**——单看一份可能撞上残留值，头尾都对才铁定是完整的新数据。
+
+#### 双缓冲 + epoch 为什么 +2
+
+两个细节把这招做稳：
+
+- **双缓冲**：靠 epoch 的奇偶，奇数轮和偶数轮写**不同的半区**。这样即使接收方读第 N 轮读得慢，第 N+1 轮的写也不会覆盖它正在读的那半区。
+- **epoch +2**：跨 session 复用时 epoch 不是 +1 而是 +2。因为上一轮残留的 slot 可能带着 `last_epoch` 或 `last_epoch+1` 的旧标志，直接 +2 才能保证新标志**绝不可能**撞上任何残留值，杜绝误判。
+
+代价是**占 2 倍带宽**——每 8B 真数据都拖着 8B 标志，一半管道在传「封条」。所以 LLA2A **只用于小消息低延迟**场景，大消息用这个太浪费。
+
+顺带一提，把「广播（bcast）」和「接收时顺手 reduce（recvReduce）」两个操作一组合，就地攒出一个**低延迟 AllReduce**——这正是小 batch 推理时想要的。
+
+<details>
+<summary>🔧 SVG 架构图：LLA2A 16B 自校验 slot</summary>
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" font-family="system-ui, sans-serif">
+  <rect width="840" height="500" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">LLA2A：一次 16B 原子写 = 数据 + 通知</text>
+  <text x="420" y="54" text-anchor="middle" font-size="12" fill="#757575">NVLink 保证 16B store 原子 · 头尾夹双 epoch 标志做自校验</text>
+
+  <!-- The 16B slot -->
+  <text x="60" y="96" font-size="13" font-weight="bold" fill="#37474F">一个 16B slot (uint4)：</text>
+  <rect x="60" y="106" width="170" height="56" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+  <text x="145" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">data_lo</text>
+  <text x="145" y="148" text-anchor="middle" font-size="9" fill="#1565C0">x · 数据低 8B</text>
+  <rect x="230" y="106" width="110" height="56" fill="#FFE082" stroke="#F9A825" stroke-width="2"/>
+  <text x="285" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">epoch</text>
+  <text x="285" y="148" text-anchor="middle" font-size="9" fill="#EF6C00">y · 标志①</text>
+  <rect x="340" y="106" width="170" height="56" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+  <text x="425" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">data_hi</text>
+  <text x="425" y="148" text-anchor="middle" font-size="9" fill="#1565C0">z · 数据高 8B</text>
+  <rect x="510" y="106" width="110" height="56" fill="#FFE082" stroke="#F9A825" stroke-width="2"/>
+  <text x="565" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">epoch</text>
+  <text x="565" y="148" text-anchor="middle" font-size="9" fill="#EF6C00">w · 标志②</text>
+  <path d="M60 172 L620 172" stroke="#546E7A" stroke-width="1.5"/>
+  <path d="M60 168 L60 176 M620 168 L620 176" stroke="#546E7A" stroke-width="1.5"/>
+  <text x="340" y="190" text-anchor="middle" font-size="11" fill="#546E7A">↑ 一条 st.v4.u32 原子写整块落地（16 字节，不可分割）</text>
+
+  <!-- Send side -->
+  <rect x="60" y="212" width="340" height="120" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="8"/>
+  <text x="75" y="234" font-size="13" font-weight="bold" fill="#1B5E20">发送方 send()</text>
+  <text x="75" y="258" font-size="11" fill="#33691E">把数据拆低/高 8B，夹入两份 epoch，</text>
+  <text x="75" y="276" font-size="11" fill="#33691E">一条原子写送到对端 slot。</text>
+  <text x="75" y="300" font-size="11" fill="#33691E">✅ 一个动作 = 送数据 + 发通知</text>
+  <text x="75" y="320" font-size="10" fill="#558B2F">（不用再单独写 flag，也就没有乱序 bug）</text>
+
+  <!-- Recv side -->
+  <rect x="440" y="212" width="340" height="120" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5" rx="8"/>
+  <text x="455" y="234" font-size="13" font-weight="bold" fill="#E65100">接收方 recv()</text>
+  <text x="455" y="258" font-size="11" fill="#EF6C00">轮询本地 slot，判据只有一句：</text>
+  <text x="455" y="280" font-size="12" font-family="monospace" font-weight="bold" fill="#BF360C">y==epoch &amp;&amp; w==epoch ?</text>
+  <text x="455" y="302" font-size="11" fill="#EF6C00">头尾标志都对 → 数据完整且是本轮的</text>
+  <text x="455" y="322" font-size="10" fill="#F57C00">（批量读多个 slot，一把 AND，保持流水）</text>
+
+  <!-- Double buffer -->
+  <rect x="60" y="348" width="720" height="62" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1" rx="6"/>
+  <text x="75" y="370" font-size="12" font-weight="bold" fill="#6A1B9A">🔁 双缓冲 + epoch 语义</text>
+  <text x="75" y="390" font-size="11" fill="#4A148C">奇/偶 epoch 写不同半区 → 慢读者不被下一轮覆盖；跨 session 复用 epoch +2 → 新标志绝不撞残留值。</text>
+  <text x="75" y="405" font-size="10" fill="#6A1B9A">代价：每 8B 数据拖 8B 标志 = 2× 带宽 → 只用于小消息低延迟。</text>
+
+  <!-- TPU comparison -->
+  <rect x="60" y="424" width="720" height="60" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="75" y="444" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="75" y="463" font-size="11" fill="#37474F">TPU 没有这种「数据夹标志自校验」的手写技巧——芯片间同步由 XLA 在 ICI 上生成的 barrier / 数据依赖保证，</text>
+  <text x="75" y="480" font-size="11" fill="#37474F">正确性是编译期性质。LLA2A 是 GPU 在弱内存模型下，用硬件原子性手工换取低延迟的典型「体操」。</text>
+</svg>
+```
+
+</details>
+
+> **本波小结**: LLA2A 是小消息低延迟全交换。核心一招——把 8B 数据和 epoch 标志打包进一个 16B slot（`{data_lo, epoch, data_hi, epoch}`），利用 NVLink 对 16B 写的原子性，**一次原子写同时送数据 + 发通知**，接收方只需查「头尾两份标志都等于本轮 epoch」就确认数据完整。头尾夹两份是自校验防残留；奇偶 epoch 做双缓冲防覆盖；跨轮 +2 防误判。代价是 2× 带宽，故只用于小消息。这是 GPU 在弱内存模型下用硬件原子性换低延迟的典型手艺，TPU 侧对应的正确性由 XLA 编译期保证。
+
+### 10.7 GIN：跨出机器，让 GPU 自己发网络包
+
+前面 LSA 那条腿只在**一台机器内部**跑（NVLink/NVSwitch）。要发到别的机器上，就得走网卡、走 RDMA。这条腿叫 **GIN**。
+
+先摊名词：
+
+- **GIN** = **G**PU-**I**nitiated **N**etworking，GPU 发起的网络通信。就是 NCCL v2.28 那套 Device API 的代号。「GPU 发起」的意思是——**GPU 自己在 kernel 里就能把网络包发出去**，不用像老 NCCL 那样每次都回到 CPU 去调一个发送函数。
+- **RDMA** = **R**emote **D**irect **M**emory **A**ccess，远程直接内存访问。网卡直接读写**对端机器的内存**，中间不惊动对端 CPU。这是跨机高速通信的地基。
+- **WQE** = **W**ork **Q**ueue **E**ntry，工作队列条目。你想让网卡干活，就往它的队列里塞一张「工单」——工单上写明「把这块内存搬到那台机器的那个地址」。
+- **doorbell**（门铃）= 一个寄存器。你塞完工单，敲一下门铃（写这个寄存器），网卡才知道「有活了」，去处理队列。
+
+#### 两种后端：谁来填工单、谁来敲门铃
+
+同样是「GPU 发起」，NCCL 有两种实现，区别就在**填工单 + 敲门铃这两个动作由谁做**：
+
+- **GDA-KI**（GPUDirect Async — Kernel Initiated）：**GPU 自己**在 kernel 里直接填 RDMA 工单、直接敲网卡门铃。全程不碰 CPU。走的是 DOCA / GPUNetIO 那套。延迟最低，但要求网卡和驱动支持这种「GPU 直接指挥网卡」的模式。
+- **PROXY**（代理）：GPU 不直接碰网卡。它把一张 128 字节的描述符（**GFD**，GPU 发出的 fabric descriptor）写进一个**环形缓冲区**（ring buffer），旁边有个 **CPU 代理线程**一直盯着这个 ring，看到新描述符就帮忙去调真正的网卡发送（IBRC verbs，也就是 `ibv_post_send` 那套）。多一个中间人，但兼容性好，任何支持标准 RDMA 的网卡都能跑。
+
+> **类比**: GDA-KI 像「GPU 自己走到邮局柜台，自己填单、自己按铃寄件」——快，但要求这家邮局支持自助。PROXY 像「GPU 把要寄的东西和一张填好的单子丢进门口的『代寄篮子』，旁边有个跑腿小哥（CPU 线程）一直盯着篮子，看到就替你跑柜台」——多一趟手，但哪家邮局都认。
+
+#### GIN 提供的动作：put / get / signal / counter / flush
+
+跨机这条腿的操作比 LSA 丰富，因为网络是异步的、要显式管「完成」和「通知」：
+
+- **put**：把本地一块数据写到远端某地址（最常用，dispatch 就是一堆 put）。
+- **get**：反过来，从远端读一块回来。
+- **putValue**：写一个小立即数过去（不用先准备一整块 buffer）。
+- **signal**（`ncclGin_SignalInc`）：给远端的一个计数器 +1。这是**跨机通知**机制——「我给你发完了」，对端轮询这个计数器就知道数据到了。对应 LSA 那条腿里 LLA2A 的「夹在数据里的 epoch 标志」，只是跨机场景下拆成了独立的 signal。
+- **counter**（`ncclGin_CounterInc`）：本地完成计数器，用来数「我发出去的 put 完成了几个」。
+- **flush**：确保前面发的东西**真的落地了**再往下走。网络是异步的，不 flush 你不知道对方收没收到。
+
+#### Team：给通信划范围
+
+GIN 用 **Team**（`ncclTeam`）来指定「这次通信在哪个范围内做」：
+
+- **ncclTeamTagLsa**：机内范围（其实就退回 NVLink 那条腿）。
+- **ncclTeamTagRail**：跨机、但只在**同一条 rail** 上（rail = GB200/GB300 里同号 GPU 连到同一组交换机形成的那条快速轨道）。
+- **ncclTeamTagWorld**：全局，所有 rank。
+
+这样上层写 A2A 时，可以对「机内的 peer 走 LSA、跨机的 peer 走 GIN Rail」做分层——这正是 DeepEPv2 Hybrid kernel 的做法。
+
+<details>
+<summary>🔧 SVG 架构图：GIN 两种后端 —— 谁填工单谁敲门铃</summary>
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="system-ui, sans-serif">
+  <rect width="860" height="520" fill="#FAFAFA" rx="12"/>
+  <text x="430" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">GIN：GPU 发起的跨机通信，两种后端</text>
+  <text x="430" y="54" text-anchor="middle" font-size="12" fill="#757575">区别只在「填 RDMA 工单 + 敲网卡门铃」由谁做</text>
+
+  <rect x="30" y="76" width="390" height="220" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2" rx="10"/>
+  <text x="225" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#1B5E20">GDA-KI（GPU 直接指挥网卡）</text>
+  <rect x="55" y="116" width="120" height="50" fill="#C8E6C9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+  <text x="115" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">GPU kernel</text>
+  <text x="115" y="156" text-anchor="middle" font-size="9" fill="#2E7D32">自己填工单+敲门铃</text>
+  <path d="M175 141 L275 141" stroke="#2E7D32" stroke-width="2.5" marker-end="url(#agrn)"/>
+  <text x="225" y="133" text-anchor="middle" font-size="9" fill="#2E7D32">WQE+doorbell</text>
+  <rect x="275" y="116" width="120" height="50" fill="#A5D6A7" stroke="#1B5E20" stroke-width="1.5" rx="6"/>
+  <text x="335" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">网卡 NIC</text>
+  <text x="335" y="156" text-anchor="middle" font-size="9" fill="#2E7D32">DOCA/GPUNetIO</text>
+  <text x="70" y="196" font-size="11" fill="#33691E">✅ 全程不碰 CPU，延迟最低</text>
+  <text x="70" y="216" font-size="11" fill="#33691E">⚠️ 要求网卡/驱动支持 GPU 直控</text>
+  <rect x="55" y="232" width="340" height="48" fill="#F1F8E9" stroke="#7CB342" stroke-width="1" rx="6"/>
+  <text x="70" y="252" font-size="10" fill="#558B2F">类比：GPU 自己走到柜台，自填单、自按铃寄件——</text>
+  <text x="70" y="268" font-size="10" fill="#558B2F">快，但要求这家邮局支持自助。</text>
+
+  <rect x="440" y="76" width="390" height="220" fill="#FFF3E0" stroke="#FB8C00" stroke-width="2" rx="10"/>
+  <text x="635" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#E65100">PROXY（CPU 跑腿代发）</text>
+  <rect x="460" y="116" width="88" height="50" fill="#FFE0B2" stroke="#FB8C00" stroke-width="1.5" rx="6"/>
+  <text x="504" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">GPU</text>
+  <text x="504" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">写 128B GFD</text>
+  <rect x="562" y="116" width="72" height="50" fill="#FFCC80" stroke="#EF6C00" stroke-width="1.5" rx="6"/>
+  <text x="598" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">ring</text>
+  <text x="598" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">环形缓冲</text>
+  <rect x="648" y="116" width="80" height="50" fill="#FFB74D" stroke="#E65100" stroke-width="1.5" rx="6"/>
+  <text x="688" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">CPU 代理</text>
+  <text x="688" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">轮询+发件</text>
+  <rect x="742" y="116" width="72" height="50" fill="#FFA726" stroke="#E65100" stroke-width="1.5" rx="6"/>
+  <text x="778" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">NIC</text>
+  <text x="778" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">verbs</text>
+  <path d="M548 141 L560 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <path d="M634 141 L646 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <path d="M728 141 L740 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <text x="480" y="196" font-size="11" fill="#EF6C00">✅ 兼容任何标准 RDMA 网卡</text>
+  <text x="480" y="216" font-size="11" fill="#EF6C00">⚠️ 多一个 CPU 中间人</text>
+  <rect x="460" y="232" width="354" height="48" fill="#FFF8E1" stroke="#FFB300" stroke-width="1" rx="6"/>
+  <text x="475" y="252" font-size="10" fill="#F57C00">类比：GPU 把东西丢进「代寄篮子」，CPU 跑腿小哥</text>
+  <text x="475" y="268" font-size="10" fill="#F57C00">盯着篮子替你跑柜台——多一趟手，但谁都认。</text>
+
+  <rect x="30" y="312" width="800" height="88" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="8"/>
+  <text x="45" y="334" font-size="13" font-weight="bold" fill="#0D47A1">GIN 动作集（网络异步，要显式管完成和通知）</text>
+  <text x="45" y="356" font-size="11" fill="#1565C0">• put / get：写/读远端数据    • putValue：写小立即数    • flush：确保真落地再往下</text>
+  <text x="45" y="376" font-size="11" fill="#1565C0">• signal (SignalInc)：给远端计数器 +1 = 跨机「我发完了」通知    • counter (CounterInc)：本地完成计数</text>
+  <text x="45" y="393" font-size="10" fill="#1976D2">↳ signal 之于 GIN，就像 LLA2A 夹在数据里的 epoch 标志之于 LSA——只是跨机场景拆成了独立通知</text>
+
+  <rect x="30" y="416" width="800" height="88" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1.5" rx="8"/>
+  <text x="45" y="438" font-size="13" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="460" font-size="11" fill="#37474F">GIN ≈ TPU 的 DCN（Data Center Network，跨机那层）；LSA ≈ TPU 的 ICI（芯片间那层）。</text>
+  <text x="45" y="480" font-size="11" fill="#37474F">但 TPU 上「谁发起、走哪条网、怎么分层」全由 XLA 编译器自动决定——没有 GDA-KI vs Proxy 的手工选型，</text>
+  <text x="45" y="497" font-size="11" fill="#37474F">也没有 put/signal/flush 要程序员亲自编排。GPU 这套灵活但要手写，TPU 那套省心但吃编译器。</text>
+
+  <defs>
+    <marker id="agrn" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#2E7D32"/></marker>
+    <marker id="aorg" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#EF6C00"/></marker>
+  </defs>
+</svg>
+```
+
+</details>
+
+> **本波小结**: GIN = GPU-Initiated Networking，跨机那条腿，让 GPU 在 kernel 里自己把 RDMA 包发出去。两种后端只差「填工单 + 敲门铃谁来做」：**GDA-KI** 是 GPU 自己直控网卡（DOCA，最快，要硬件支持），**PROXY** 是 GPU 写 128B 描述符进 ring、CPU 代理线程代发（最通用）。动作集 put/get/putValue/signal/counter/flush——其中 **signal 给远端计数器 +1，是跨机版的「我发完了」通知**，对应 LSA 里 LLA2A 夹在数据里的 epoch 标志。Team（Lsa/Rail/World）划通信范围，让上层能「机内走 LSA、跨机走 GIN」分层。类比 TPU：GIN≈DCN、LSA≈ICI，但 TPU 那套由 XLA 自动编排，GPU 这套要手写换灵活。
+
+### 10.8 压轴：两条腿拼进一个 Hybrid AlltoAll kernel
+
+前面把两条腿分开讲了——LSA 管机内、GIN 管跨机。现在看它们怎么在**同一个 kernel** 里拼起来，干一件完整的活：**Hybrid AlltoAll**（混合全交换）。NCCL 官方示例在 `docs/examples/06_device_api/03_alltoall_hybrid/main.cu`。
+
+一句话概括这个 kernel 干嘛：每个 rank 要把自己 sendbuf 里的数据，按「哪块给谁」分发到所有其他 rank 的 recvbuf。**同节点的 peer 走 LSA 直写，跨节点的 peer 走 GIN put**——两条腿并行跑，最后一个 barrier 收口。
+
+先补一个名词：**CTA**（Cooperative Thread Array），就是一个**线程块**（thread block）——GPU 上一组绑在一起、能共享 shared memory、能一起同步的线程。这个例子开了 16 个 CTA、每个 CTA 一堆线程，总共 8192 个线程一起干活。
+
+#### 七个阶段（0 到 6），一步步拆
+
+- **阶段 0 · 初始化 + 信号快照**：每个 CTA 用自己的编号 `blockIdx.x` 当作专属的 **signal 槽位**（signalIndex）。进 kernel 第一件事——`readSignal` 记下这个槽位**当前的计数值**当基线。为什么要记基线？因为后面要靠「计数涨了多少」判断收了多少包，得先知道起点。
+
+- **阶段 1 · acquire 屏障（开工前对齐）**：用 world team（全体 rank）+ GIN 做一次 barrier，语义是 `memory_order_acquire`。意思是——**等所有 rank 都进了 kernel、recv buffer 都准备好接收了，本 rank 才开始发**。不然你往对方的 recvbuf 写，对方 kernel 还没启动，就写飞了。
+
+- **阶段 2 · 给跨机 peer 发 GIN put**：8192 个线程联合分片，遍历所有**跨节点** rank，每个远端 put 由某一个线程发起。put 时挂上 `ncclGin_SignalInc{signalIndex}`——告诉网络层「这个 put 到达对端后，在对端那个 signalIndex 槽位上 +1」。这就是跨机的「我发到了」通知。
+
+- **阶段 3 · 给机内 peer 做 LSA store**：用 `ncclGetLsaPointer` 拿到**同节点**其他 rank 的 recvbuf 虚拟地址（NVLink 直达），直接把本地 sendbuf 对应段写过去。注意——这里**不需要**每次都单独发通知，机内的可见性由最后阶段 6 的 release barrier 统一保证。
+
+- **阶段 4 · 接收端等 GIN put 到齐**：挑唯一一个 CTA 负责等待本 rank 的槽位，`waitSignal` 一直等到计数 = `基线 + 跨机 peer 数`。到这个数，就说明所有该收的跨机包都到了。（机内那条腿不在这等，它靠 barrier 收口。）
+
+- **阶段 5 · flush 网络**：`gin.flush` 确保本 CTA 发出去的所有 GIN 操作在**网卡侧真正排空**，没有未决请求挂着。前面说过网络异步，不 flush 你不敢往下走。
+
+- **阶段 6 · release 屏障（收工同步）**：再来一次 barrier，语义 `memory_order_release`——把本 rank 完成的**所有 LSA 写入发布给所有 peer**，同时同步 LSA 和 GIN 双方。这一步做完，主机端 `cudaStreamSynchronize` 回来后，recvbuf 里的全部内容（不管来自 NVLink 还是 RDMA）就都齐了、都可见了。
+
+> **两条腿的通知机制不一样，这点最值得记**：跨机 GIN 用**显式 signal 计数**（阶段 2 挂 SignalInc、阶段 4 waitSignal）；机内 LSA 不逐个通知，靠**头尾两个 barrier**（阶段 1 acquire 开工、阶段 6 release 收工）统一保证可见性。前者精确到「收了几个」，后者是「大家都到齐了才放行」。一个是点对点回执，一个是集体哨声。
+
+<details>
+<summary>🔧 SVG 架构图：Hybrid AlltoAll kernel 七阶段时间线</summary>
+
+```svg
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="system-ui, sans-serif">
+  <rect width="880" height="560" fill="#FAFAFA" rx="12"/>
+  <text x="440" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">Hybrid AlltoAll：一个 kernel，两条腿并行</text>
+  <text x="440" y="52" text-anchor="middle" font-size="12" fill="#757575">机内走 LSA 直写 · 跨机走 GIN put · 头尾 barrier 收口</text>
+
+  <!-- timeline spine -->
+  <line x1="70" y1="78" x2="70" y2="500" stroke="#B0BEC5" stroke-width="3"/>
+
+  <!-- Phase 0 -->
+  <circle cx="70" cy="98" r="6" fill="#5C6BC0"/>
+  <rect x="95" y="80" width="740" height="36" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="108" y="103" font-size="12" fill="#283593"><tspan font-weight="bold">阶段0 初始化+信号快照</tspan> · 每个 CTA 认领 signalIndex=blockIdx.x，readSignal 记下计数基线</text>
+
+  <!-- Phase 1 -->
+  <circle cx="70" cy="146" r="6" fill="#8E24AA"/>
+  <rect x="95" y="128" width="740" height="36" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1.5" rx="6"/>
+  <text x="108" y="151" font-size="12" fill="#6A1B9A"><tspan font-weight="bold">阶段1 acquire 屏障</tspan> · 等所有 rank 进 kernel、recvbuf 就绪，本 rank 才开工（防写飞）</text>
+
+  <!-- Two legs region -->
+  <rect x="95" y="176" width="740" height="150" fill="#FFFFFF" stroke="#CFD8DC" stroke-width="1" rx="8" stroke-dasharray="4 3"/>
+  <text x="108" y="194" font-size="11" fill="#607D8B" font-weight="bold">阶段 2 &amp; 3：两条腿并行发数据 ↓↓</text>
+
+  <!-- GIN leg -->
+  <circle cx="70" cy="232" r="6" fill="#E65100"/>
+  <rect x="115" y="210" width="345" height="100" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5" rx="6"/>
+  <text x="130" y="232" font-size="12" font-weight="bold" fill="#E65100">阶段2 · 跨机 peer → GIN put</text>
+  <text x="130" y="252" font-size="10.5" fill="#EF6C00">8192 线程联合分片遍历远端 rank</text>
+  <text x="130" y="270" font-size="10.5" fill="#EF6C00">每 put 挂 SignalInc{signalIndex}</text>
+  <text x="130" y="288" font-size="10.5" fill="#EF6C00">→ 到达对端后对端槽位 +1</text>
+  <text x="130" y="304" font-size="9.5" fill="#F57C00">（显式点对点回执）</text>
+
+  <!-- LSA leg -->
+  <circle cx="70" cy="232" r="0" fill="none"/>
+  <rect x="475" y="210" width="345" height="100" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+  <text x="490" y="232" font-size="12" font-weight="bold" fill="#1B5E20">阶段3 · 机内 peer → LSA store</text>
+  <text x="490" y="252" font-size="10.5" fill="#2E7D32">ncclGetLsaPointer 拿对端 recvbuf VA</text>
+  <text x="490" y="270" font-size="10.5" fill="#2E7D32">NVLink 直写，不逐个发通知</text>
+  <text x="490" y="288" font-size="10.5" fill="#2E7D32">→ 可见性交给阶段6 barrier</text>
+  <text x="490" y="304" font-size="9.5" fill="#388E3C">（集体哨声，非点对点）</text>
+
+  <!-- Phase 4 -->
+  <circle cx="70" cy="356" r="6" fill="#C62828"/>
+  <rect x="95" y="338" width="740" height="36" fill="#FCE4EC" stroke="#C62828" stroke-width="1" rx="6"/>
+  <text x="108" y="361" font-size="12" fill="#B71C1C"><tspan font-weight="bold">阶段4 waitSignal</tspan> · 挑一个 CTA 等本 rank 槽位涨到「基线 + 跨机 peer 数」= 跨机包全到</text>
+
+  <!-- Phase 5 -->
+  <circle cx="70" cy="404" r="6" fill="#EF6C00"/>
+  <rect x="95" y="386" width="740" height="36" fill="#FFF8E1" stroke="#FFB300" stroke-width="1" rx="6"/>
+  <text x="108" y="409" font-size="12" fill="#E65100"><tspan font-weight="bold">阶段5 flush</tspan> · 确保本 CTA 的 GIN 操作在网卡侧排空，无未决请求</text>
+
+  <!-- Phase 6 -->
+  <circle cx="70" cy="452" r="6" fill="#8E24AA"/>
+  <rect x="95" y="434" width="740" height="36" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1.5" rx="6"/>
+  <text x="108" y="457" font-size="12" fill="#6A1B9A"><tspan font-weight="bold">阶段6 release 屏障</tspan> · 发布全部 LSA 写入 + 同步 LSA/GIN 双方 → recvbuf 全就绪</text>
+
+  <!-- footer -->
+  <rect x="95" y="484" width="740" height="30" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="108" y="503" font-size="11" fill="#283593">host: cudaStreamSynchronize 回来 → recvbuf 里 NVLink + RDMA 来的数据全部齐活、可见</text>
+
+  <!-- TPU note -->
+  <rect x="95" y="524" width="740" height="28" fill="#E3F2FD" stroke="#1565C0" stroke-width="1" rx="6"/>
+  <text x="108" y="543" font-size="10.5" fill="#0D47A1">🔗 TPU 对比：这七阶段的「发送+同步+可见性」在 TPU 上是 XLA 编译 collective 时自动生成的，程序员只写 jax.lax.all_to_all</text>
+</svg>
+```
+
+</details>
+
+#### 回接 DeepEPv2：地基和上层打通
+
+现在把这篇「地基」接回本文前九节讲的 DeepEPv2：
+
+- DeepEPv2 的 **dispatch**（把 token 按 router 结果散到各 expert 所在 rank）和 **combine**（算完再收回来），本质就是 **AlltoAll**——正是这个 kernel 干的事。
+- DeepEPv2 V2 用 **NCCL Gin 当后端**，它的 Hybrid kernel「机内 NVLink 汇聚 + 跨机 RDMA 回源」的两层结构，就是上面**阶段 2/3 两条腿**的放大版：机内 peer 走 LSA、跨机 peer 走 GIN。
+- 前面第九节那张对比表里「Hierarchical combine = NVLink 汇聚 + RDMA 回源」这一行，现在你知道底下具体是**怎么用对称 VA + LSA store + GIN put** 实现的了。
+
+> **本波小结（也是全章小结）**: Hybrid AlltoAll kernel 用七个阶段把两条腿拼成一次完整全交换——阶段0 记信号基线、阶段1 acquire barrier 对齐开工、阶段2 给跨机 peer 发 GIN put（挂 SignalInc 通知）、阶段3 给机内 peer 做 LSA 直写（不逐个通知）、阶段4 waitSignal 等跨机包到齐、阶段5 flush 排空网卡、阶段6 release barrier 发布可见性。**两条腿通知机制不同是精髓**：GIN 用显式 signal 计数（点对点回执），LSA 用头尾 barrier（集体哨声）。这正是 DeepEPv2 dispatch/combine 底下的地基——机内 NVLink + 跨机 RDMA 的分层全交换。整篇对照 TPU：GPU 这套「对称 VA + 手写两条腿 + 手工 barrier/signal」灵活但要程序员亲自编排，TPU 那套把发送、同步、可见性全塞进 XLA 编译期，你只写一行 `jax.lax.all_to_all`。灵活 vs 省心，这就是两条技术路线最根本的分野。
+
+---
+
+📖 **第十章完**。NCCL Gin & Symmetric Memory 地基篇，从「为什么要设备发起」一路拆到「两条腿怎么拼成一个 Hybrid AlltoAll」，中间过了对称 VA 三步拼装、LSA 机内直写、LLA2A 原子写、GIN 跨机 put。这套地基撑起了本文前九节的 DeepEPv2。
