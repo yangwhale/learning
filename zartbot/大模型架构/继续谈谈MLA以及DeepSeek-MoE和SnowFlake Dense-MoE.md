@@ -16,28 +16,55 @@
 
 DeepSeekV2的一些超参数如下：
 
-参数名称参数符号DeepSeekV2DeepSeek-67B模型层数
-6095hidden_size
-51208192Head数量
-12864/GQA=8Head维度
-128128KV压缩维度
-512-Q压缩维度
-1536-ROPE维度
-64-
+| 参数名称 | 参数符号 | DeepSeekV2 | DeepSeek-67B |
+| --- | --- | --- | --- |
+| 模型层数 |  | 60 | 95 |
+| hidden_size |  | 5120 | 8192 |
+| Head数量 |  | 128 | 64/GQA=8 |
+| Head维度 |  | 128 | 128 |
+| KV压缩维度 |  | 512 | - |
+| Q压缩维度 |  | 1536 | - |
+| ROPE维度 |  | 64 | - |
 
-我们可以注意到相对于DeepSeek-67B，DeepSeekV2模型的层数更浅，Hidden_Size也更低，同时输入到压缩KV的维度为Head维度的4倍,而
+我们可以注意到相对于DeepSeek-67B，DeepSeekV2模型的层数更浅，Hidden_Size也更低，同时输入到压缩KV的维度为Head维度的4倍，而 $d_c = 512 \ll d_h n_h = 128 \times 128$
 
 采用MHA时
 
+<!-- 公式存疑,需核对: 原文此处为公式图片, 微信渲染为空白 -->
+
 采用MLA时
 
+<!-- 公式存疑,需核对: 原文此处为公式图片, 微信渲染为空白 -->
+
 训练时额外的计算量和实际参数量
+
+```python
+W_q = np.random.randn(n_h,d_h,d)
+W_uq,W_dq = np.random.randn(n_h,d_h,d_c_prime),np.random.randn(d_c_prime,d)
+
+path_info = oe.contract_path('ijk,kh->ijh',W_uq,W_dq,optimize='optimal')
+print(path_info[1])
+```
 
 ![图片](assets/9661837e2004.png)
 
 对于KV采用MLA时
 
+$$W^K = W^{UK} \cdot W^{DKV}, \quad W^V = W^{UV} \cdot W^{DKV}$$
+
 训练时额外的计算量和实际参数量
+
+```python
+W_k = np.random.randn(n_h,d_h,d)
+W_uk,W_dkv = np.random.randn(n_h,d_h,d_c),np.random.randn(d_c,d)
+
+path_info = oe.contract_path('ijk,kh->ijh',W_uk,W_dkv,optimize='optimal')
+print(path_info[1])
+
+print("MHA参数量:",W_k.size*2 )
+print("MLA参数量:",W_uk.size*2+W_dkv.size)
+print("MLA参数量:",(W_uk.size*2+W_dkv.size)/(W_k.size*2))
+```
 
 ![图片](assets/ecec4836ae5d.png)
 
@@ -47,11 +74,13 @@ DeepSeekV2的一些超参数如下：
 
 那么有一个问题，为什么不在训练阶段直接结合和呢？
 
-从梯度更新的角度来看，这样的过程使得优化更加简单
+1. 从梯度更新的角度来看，这样的过程使得优化更加简单
 
-从Projection的角度来看，KV共享某种意义上对于空间构成了一种约束，Weight Tying 使得模型能够更好的收敛，并且提高其泛化能力，还可以提高模型的稳定性。
+$$\nabla(\varphi\psi) = \psi\nabla(\varphi) + \varphi\nabla(\psi)$$
 
-在推理需要量化时，也可以BF16把W^{UV}$结合计算完后再量化，相应的精度损失应该也可控。
+2. 从Projection的角度来看，KV共享 $W^{DKV}$ 某种意义上对于空间构成了一种约束，Weight Tying 使得模型能够更好的收敛，并且提高其泛化能力，还可以提高模型的稳定性。
+
+3. 在推理需要量化时，也可以BF16把 $W^{UK}, W^{UV}$ 结合计算完后再量化，相应的精度损失应该也可控。
 
 这种做法实际上还使得每个Head输入的维度为MHA的4倍，进一步带来了一些优势。
 
@@ -75,15 +104,19 @@ DeepSeekMoE的工作主要是构建了
 
 从代数的角度来看,MoE计算实际上是对Token进行一次置换群的操作，构成
 
+$$P \circ T \circ concat(Experts) \circ P^{-1}$$
+
 P为一个进行Token位置置换的稀疏矩阵，实际上也构成了代数上的一个置换群的结构
 
 而我们再来看Monarch矩阵，两者代数结构上是相通的，Monarch矩阵定义如下
 
-其中是Permutation矩阵，是Block Diagonal矩阵：
+$$M = PLP^T R$$
+
+其中 $P, P^T$ 是Permutation矩阵，$L, R$ 是Block Diagonal矩阵：
 
 ![图片](assets/93c02a91f825.png)
 
-而在MoE中，是需要对Token进行还原，保证原有的Token顺序输出到下一层。
+而在MoE中，$P^{-1}$ 是需要对Token进行还原，保证原有的Token顺序输出到下一层。
 
 ![图片](assets/2764160f7c3a.png)
 

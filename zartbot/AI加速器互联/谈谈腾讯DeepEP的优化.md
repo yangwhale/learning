@@ -10,6 +10,24 @@
 
 ![图片](assets/fbcc9d948798.png)
 
+> **Support multi-QP for normal kernels #130** (Merged, LyricZhao merged 9 commits into `main` from `trmt/internode_multi_qp`)
+>
+> This PR is authored by **Tencent Network Platform Department**. Thanks for the contribution! Now normal kernels have a huge speedup:
+>
+> | Type | Dispatch #EP | Bottleneck bandwidth | Combine #EP | Bottleneck bandwidth |
+> |---|---|---|---|---|
+> | Internode | 32 | 44 → 58 GB/s (RDMA) | 32 | 47 → 57 GB/s (RDMA) |
+> | Internode | 64 | 46 → 51 GB/s (RDMA) | 64 | 45 → 50 GB/s (RDMA) |
+>
+> Through in-depth optimization, the following enhancements have been implemented in the internode normal kernels.
+>
+> - Replacing IBRC with IBGDA
+> - Utilizing distinct QPs (Queue Pairs) per channel for parallel data transmission
+>
+> These improvements not only enhance the robustness of the internode normal kernels in scenarios involving dual-port NICs and RoCE networks but also further elevate communication performance.
+>
+> NOTES: the bandwidth in the table is algorithm bandwidth, for physical bandwidth, e.g. $58 \times 3/4 = 43.5$ .
+
 其实在2月底刚发布DeepEP的时候, 我就做了一些分析
 
 [《分析一下EP并行和DeepSeek开源的DeepEP代码》](https://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247493292&idx=1&sn=7af7db0f3d78f0fb52dc847934c7800e&scene=21#wechat_redirect)

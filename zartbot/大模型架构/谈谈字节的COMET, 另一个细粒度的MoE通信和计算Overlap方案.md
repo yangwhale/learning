@@ -12,7 +12,7 @@
 
 首先是当前的训练框架下, 论文中说跨机通信会导致47%的时间开销在MoE通信上, 因此需要更佳细粒度的Overlap,Comet的主要工作是对通信和计算之间的共享Buffer(即文章中的Shared Tensor)进行分析, 并按照特定的维度分解来消除通信和计算之间粒度不匹配的问题, 并重新组织数据进行调度, 实现了细粒度的Overlap, 最终单个MoE层执行速度性能提升了1.96倍. E2E提升了1.71倍.
 
-然后代码已经开源并整合到了Flux**框架[2]
+然后代码已经开源并整合到了Flux框架[2]
 
 ### 1. 通信和计算Overlap的难题
 
@@ -26,7 +26,7 @@
 
 这样的错配带来了复杂的数据依赖性, Token的具体路由决策由MoE Gating决定, 每一个Batch Expert需要处理的Token都对MoE disptach阶段的实际结果有数据依赖. 即进行GEMM的block Tile将会关联多个token, 这些是由Disptach的token_idx决定的. 然后作者直接得出了一个结论, 需要通过细粒度的通信, 让每一个计算的Tile通过UVA(Unified Virtual Address)读写, 并利用数据的重组和重新调度来有效的隐藏访问延迟并提高计算效率.
 
-紧接着就谈到了细粒度的通信. Token粒度的通信和TileBased Computing进行Overlap挺难的, GPU之间的跨机远程I/O操作**延迟更高, 对远程的token进行大量的细粒度读写可能导致耗时过长阻塞后续计算, 使得计算资源利用率较低. 然后提到了对Hopper中的TMA**构建的异步pipeline延迟影响更大.
+紧接着就谈到了细粒度的通信. Token粒度的通信和TileBased Computing进行Overlap挺难的, GPU之间的跨机远程I/O操作延迟更高, 对远程的token进行大量的细粒度读写可能导致耗时过长阻塞后续计算, 使得计算资源利用率较低. 然后提到了对Hopper中的TMA构建的异步pipeline延迟影响更大.
 
 #### 1.2 不同的计算和通信负载
 
@@ -64,7 +64,7 @@ Adaptive workload assignment: 动态负载均衡, 平衡通信和计算核的开
 
 GEMM采用Cutlass实现, 并采用了Warp Specialization, Producer Warp采用TMA从GMEM拷贝内存到SMEM, Consumer Warp执行MMA计算, 并将结果写回到GMEM. 然后通信的warp再从GMEM读取进行后续的通信.
 
-这是常规操作, 但总感觉这里很不舒服, 就像一个Linux的TCP协议栈那样, 多了一次拷贝, 所以后面写了一小段`HW resource restriction`.理论上可以将COMPUTE和COMM**放在同一个Thread Block内, 避免额外的GMEM access, 但是Thread Number的限制是的通信算子无法有效的利用资源,同时COMM和COMPUTE在一起还有互相的干扰.
+这是常规操作, 但总感觉这里很不舒服, 就像一个Linux的TCP协议栈那样, 多了一次拷贝, 所以后面写了一小段`HW resource restriction`.理论上可以将COMPUTE和COMM放在同一个Thread Block内, 避免额外的GMEM access, 但是Thread Number的限制是的通信算子无法有效的利用资源,同时COMM和COMPUTE在一起还有互相的干扰.
 
 既然分离了COMPUTE和COMM, 那么就要有一个根据负载自适应调整的能力. 主要就是针对不同的workload做了profiling
 

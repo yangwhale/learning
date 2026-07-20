@@ -8,15 +8,15 @@
 
 最近在优化DeepSeek-R1推理过程中, 对于Attention block的计算复杂度还是挺有挑战的, 和一些朋友都在聊Prefill要满足TTFT的代价还是很大的, 当时就在想是否还有比MLA更好的一些算法,特别是针对Reasoning model context越来越长的问题, 而今天就看到DeepSeek NSA(native sparse attention)的论文. 非常简单直接的解法, 协同硬件效率又非常高.
 
-个人觉得文章中最精彩的就是3.1和3.2这一段. 首先背景介绍了Attention的计算复杂度
+个人觉得文章中最精彩的就是3.1和3.2这一段. 首先背景介绍了Attention的计算复杂度 $\mathscr{O}(N^2)$
 
 ![图片](assets/3c2348bfb0b6.png)
 
-然后一个非常朴素简单的想法就是, 是否能够有一个函数把映射到一个低维空间?
+然后一个非常朴素简单的想法就是, 是否能够有一个函数把 $k_{:t}, v_{:t}$ 映射到一个低维空间?
 
 ![图片](assets/b0f23f28be26.png)
 
-那么函数怎么构造呢?  其实以前也介绍过很多sparse attention算法, 具体可以参考.
+那么 $f_K, f_V$ 函数怎么构造呢?  其实以前也介绍过很多sparse attention算法, 具体可以参考.
 
 [《大模型时代的数学基础(4)》](https://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247488680&idx=1&sn=7da835f9370689d9b3b1f17a277d7d03&scene=21#wechat_redirect)
 
@@ -34,7 +34,7 @@
 
 ### 1. Token Compression
 
-基于block粒度的压缩计算, block长度为,相邻block的滑动跳步为, 为一个可学习的MLP, 并且在block之间插入了位置信息编码.
+基于block粒度的压缩计算, block长度为 $l$，相邻block的滑动跳步为 $d$，$\varphi$ 为一个可学习的MLP, 并且在block之间插入了位置信息编码.
 
 ### 2. Token Selection
 
@@ -46,7 +46,7 @@
 
 ### 3. Sliding window
 
-很简单的一个滑动窗口选择, . 最后通过一个Gating函数来综合Compression/Selection/Sliding的attention输出.
+很简单的一个滑动窗口选择，$\widetilde{K}_t^{win} = k_{t-w:t}$，$\widetilde{V}_t^{win} = v_{t-w:t}$。最后通过一个Gating函数来综合Compression/Selection/Sliding的attention输出.
 
 ### 4. Hardware Aligned Kernel Design
 
