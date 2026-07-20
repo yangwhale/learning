@@ -21,7 +21,18 @@
 本文目录如下:
 
 ```
-1. Groq 3 LPU 芯片架构1.1 Groq 为什么需要确定性执行1.2 Groq 3 LPU微架构1.3 Groq 3 ComputeTray架构1.4 LPX机柜结构1.5 Fabric Expansion Logic2. Vera Rubin + LPX2.1 为什么推理需要Groq LPU?2.2 详细的AFD工作流程2.3 Speculative Decoding3. 从供应链角度分析CPX和LPX4. LPX系统未来展望
+1. Groq 3 LPU 芯片架构
+    1.1 Groq 为什么需要确定性执行
+    1.2 Groq 3 LPU微架构
+    1.3 Groq 3 ComputeTray架构
+    1.4 LPX机柜结构
+    1.5 Fabric Expansion Logic
+2. Vera Rubin + LPX
+    2.1 为什么推理需要Groq LPU?
+    2.2 详细的AFD工作流程
+    2.3 Speculative Decoding
+3. 从供应链角度分析CPX和LPX
+4. LPX系统未来展望
 ```
 
 ## 1. Groq 3 LPU 芯片架构
@@ -32,25 +43,21 @@
 
 传统的HPC系统和多核心CPU/GPU架构在内存和网络资源上存在动态共享和竞争, 导致**不确定性**(non-determinism),GPGPU的内存层次结构看上去太厚了, 虽然某种层度上降低了编程的一些复杂度, 但是很多时候还是面临一些不可控的因素. 不确定性的来源主要包含几个方面:
 
-动态指令调度 (Dynamic instruction scheduling): 乱序执行核心会改变指令的完成顺序.
-
-缓存层次 (Cache hierarchy): 缓存命中/缺失导致内存访问延迟不确定.
-
-动态网络路由 (Dynamic network routing): 网络拥塞导致数据包延迟变化和乱序到达.
-
-共享内存仲裁 (Shared memory arbitration): 多个核心争用内存控制器.
+1. 动态指令调度 (Dynamic instruction scheduling): 乱序执行核心会改变指令的完成顺序.
+2. 缓存层次 (Cache hierarchy): 缓存命中/缺失导致内存访问延迟不确定.
+3. 动态网络路由 (Dynamic network routing): 网络拥塞导致数据包延迟变化和乱序到达.
+4. 共享内存仲裁 (Shared memory arbitration): 多个核心争用内存控制器.
 
 这对于一个超大规模的机器学习系统来说构成了一个巨大的挑战. 这种不确定性使得精确的并行协调变得非常困难. 在需要紧密耦合的并行任务中, 处理器A不知道处理器B的数据何时能到, 只能通过昂贵的同步机制(如屏障, 锁)来等待, 造成大量时间浪费. Groq认为, 与其在不确定的系统中通过复杂的软件来"管理"不确定性, 不如从硬件层面就构建一个确定性的系统.
 
 Groq的**解决方案**: 其核心是将单个TSP芯片内部的确定性(determinism), 通过一套精心设计的软硬件机制, 扩展到整个由数千个TSP组成的系统. 确定性执行包括如下两个方面:
 
-网络不再是"尽力而为"的动态系统. 相反, 编译器在编译时就规划好了所有通信路径和时序, 从源头上消除了运行时的网络争用和拥塞.
-
-运行时去偏斜(runtime deskew)指令: 硬件提供了特殊的ISA指令, 允许软件在运行时周期性地校正由各个芯片独立时钟频率漂移带来的微小时间偏差, 从而维持整个系统在宏观上的"lock-step"同步.
+1. 网络不再是"尽力而为"的动态系统. 相反, 编译器在编译时就规划好了所有通信路径和时序, 从源头上消除了运行时的网络争用和拥塞.
+2. 运行时去偏斜(runtime deskew)指令: 硬件提供了特殊的ISA指令, 允许软件在运行时周期性地校正由各个芯片独立时钟频率漂移带来的微小时间偏差, 从而维持整个系统在宏观上的"lock-step"同步.
 
 这也是我一直在强调整个系统建模的时候, Little‘s Law和Kingman公式的重要性. Kingman’s公式是排队论中对于一个通用的单服务器队列模型 G/G/1, 其平均队列延迟为:
-
-其中为到达速率, 为服务速率,即平均服务时间的倒数, 为系统的使用率. 为到达时间的变异系数,为服务时间的变异系数. 变异系数CV为标准差除以均值. 然后我们可以根据然后取不同的变异系数做出一个图来.
+$$\mathbb{E}(W_q) = \left(\frac{\rho}{1-\rho}\right)\left(\frac{c_a^2 + c_s^2}{2}\right)\frac{1}{\mu}$$
+其中 $\lambda$ 为到达速率, $\mu$ 为服务速率, 即平均服务时间的倒数, $\rho = \lambda/\mu$ 为系统的使用率. $c_a$ 为到达时间的变异系数, $c_s$ 为服务时间的变异系数. 变异系数CV为标准差除以均值. 然后我们可以根据 $\rho/(1-\rho)$ 然后取不同的变异系数做出一个图来.
 
 ![图片](assets/2a1713f800a8.png)
 
@@ -134,26 +141,28 @@ Jensen要不要给我充个值呢?
 ### 2.1 为什么推理需要Groq LPU?
 
 首先我们需要对整个 workload 进行详细的分析, 特别是Agentic LLM推理的workload.
-Agentic LLM工作特征
+
+**Agentic LLM工作特征**
+
 现在的Agentic LLM通常是你给它一个复杂任务, 比如"帮我写个爬虫程序抓取天气数据", 它会自己上网查资料、写代码、运行代码、调试错误, 这个过程需要来来回回几十甚至上百步. 尽管每个单独工具调用或者反馈都很短(通常数百个Token), 但是上下文会逐轮累积, 并增加到极长的长度.  也就是说整个agentic LLM的工作特征是Context长度通常很长(>100K), 并且需要多轮交互, 每次交互过程如下:
 
-模型会在 Decoding 阶段生成1000~2000个token 其中包括一些tool call的调用.
+1. 模型会在 Decoding 阶段生成1000~2000个token 其中包括一些tool call的调用.
+2. Agent根据模型反馈的tool call调用执行, 并返回执行结果, 通常数百个token.
+3. 推理引擎会将Agent返回的结果添加到Context中, 并执行Prefill.
+4. Prefill完成后, 模型会继续进入Decoding阶段, 生成新的Tool call调用.
 
-Agent根据模型反馈的tool call调用执行, 并返回执行结果, 通常数百个token.
+**Prefill Workload**
 
-推理引擎会将Agent返回的结果添加到Context中, 并执行Prefill.
-
-Prefill完成后, 模型会继续进入Decoding阶段, 生成新的Tool call调用.
-Prefill Workload
 随着Context在多轮交互中越来越长, 实际上它会对内存容量有更高的需求, 因此我们也可以认为该阶段是一个Memory Capacity Bound 的约束. 当然Prefill阶段本身也是一个Compute Bound的运算过程.
-Decode Workload
+
+**Decode Workload**
+
 在Decoding阶段, Attention相关的计算依旧需要需要维持整个Context, 因此同样有Memory Capacity Bound 的约束. 由于内存容量的约束, 通常很多操作在很小的batchsize下运行, 并且在MoE阶段, 通常一个 token 需要 8 个Expert参与运算, Expert参数加载这些操作也会带来巨大的内存访问. 因此这个阶段也是一个Memory Bandwidth Bound的过程.
 
 总体来看:
 
-Prefill阶段: Compute Bound + Memory Capacity Bound
-
-Decode阶段: Memory Cacacity Bound(Attention Block Only) + Memory Bandwidth Bound
+- Prefill阶段: Compute Bound + Memory Capacity Bound
+- Decode阶段: Memory Cacacity Bound(Attention Block Only) + Memory Bandwidth Bound
 
 另一方面, 传统的 TPS SLO 是针对聊天场景人的阅读速度而定的. 对于Agent执行它仅需很短的时间读取模型返回的tool call调用, 因此多轮交互场景中我们需要显著提高 Decode 阶段的 TPS 才能加速Agent的整体执行时间. 也就是说对于AI Factory的 SLO 要求是既需要整体的高吞吐(TPS per MW), 也需要每个用户更高的TPS(TPS per User).
 
@@ -210,91 +219,17 @@ Groq 3上有一个用于缓存token的FIFO, 如下图所示
 
 然后我们利用我以前开发的一个工具《ShallowSim》[1]来仿真计算Rubin的MLA计算时间, 由于Expert参数都存到Groq 3 LPU了, Rubin有足够大的内存来存放更长的KVCache. 但是为了更低的延迟, 在Rubin上BatchSize需要更小, 我们以Batchsize = 16为例进行仿真, MLA 算子消耗时间,以及按照61层加上FFN的时间(20us)计算TPS如下表所示:
 
-Context Length
-
-1K
-
-4K
-
-8K
-
-32K
-
-64K
-
-128K
-
-MLA
-
-67us
-
-72us
-
-79us
-
-125us
-
-225us
-
-400us
-
-TPS
-
-188
-
-178
-
-165
-
-113
-
-67
-
-39
+| Context Length | 1K | 4K | 8K | 32K | 64K | 128K |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| MLA | 67us | 72us | 79us | 125us | 225us | 400us |
+| TPS | 188 | 178 | 165 | 113 | 67 | 39 |
 
 如果按照Batch Size = 4 计算:
 
-Context Length
-
-1K
-
-4K
-
-8K
-
-32K
-
-64K
-
-128K
-
-MLA
-
-66us
-
-67us
-
-69us
-
-80us
-
-94us
-
-124us
-
-TPS
-
-190
-
-188
-
-184
-
-163
-
-143
-
-113
+| Context Length | 1K | 4K | 8K | 32K | 64K | 128K |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| MLA | 66us | 67us | 69us | 80us | 94us | 124us |
+| TPS | 190 | 188 | 184 | 163 | 143 | 113 |
 
 这仅是不开Speculative Decoding情况下的TPS, 如果打开我们假设在小batchsize的场景有2~3倍的TPS, 也就是说如果我们要满足端到端TPS > 100, 那么整个Forward计算的延迟需要维持在 30ms 以内(TPS = 33, 此时每层的时间大约为490us.
 
@@ -316,11 +251,11 @@ Nvidia的官方博客还讲述了Groq LPU的另一个使用场景: 推测解码
 
 ![图片](assets/de0170ac037d.png)
 
-目标模型已经生成了 How Can I, 在生成 “I”的时候, 我们不光记下这个词, 还从AI的大脑里把与 "How" 和 "can" 相关的早、中、晚期思考过程(低、中、高层特征)都抽了出来. 然后把这些不同阶段的思考过程 "揉" 在一起, 得到一个更精华的特征  和 .
+目标模型已经生成了 How Can I, 在生成 “I”的时候, 我们不光记下这个词, 还从AI的大脑里把与 "How" 和 "can" 相关的早、中、晚期思考过程(低、中、高层特征)都抽了出来. 然后把这些不同阶段的思考过程 "揉" 在一起, 得到一个更精华的特征 $g_{how}$ 和 $g_{can}$.
 
-然后利用草稿模型处理, 我们把刚刚得到的精华特征  和新生成的词 "I" 的信息(词嵌入 )一起喂给它. 它经过一番计算, 得到一个中间结果 , 这个结果通过目标模型的 "翻译器"(LM头), 就猜出了下一个词是 "do".
+然后利用草稿模型处理, 我们把刚刚得到的精华特征 $g_{how}, g_{can}$ 和新生成的词 "I" 的信息(词嵌入 $e_I$)一起喂给它. 它经过一番计算, 得到一个中间结果 $a_I$, 这个结果通过目标模型的 "翻译器"(LM头), 就猜出了下一个词是 "do".
 
-现在我们要猜 "do" 后面的词. 可是 "do" 只是我们的猜测, 还没经过大AI的确认, 所以我们拿不到它对应的 "精华特征" . 怎么办呢? EAGLE-3用了一个巧妙的替代方案: 直接用上一步生成的那个**中间结果** 来**假装**是 "I" 的精华特征 . 然后, 把这个假装的  (也就是 ) 和新猜出来的词 "do" 的信息 () 一起喂给小助手, 它又一番计算, 得到 , 进而猜出下一个词 "it".
+现在我们要猜 "do" 后面的词. 可是 "do" 只是我们的猜测, 还没经过大AI的确认, 所以我们拿不到它对应的 "精华特征" $g_{do}$. 怎么办呢? EAGLE-3用了一个巧妙的替代方案: 直接用上一步生成的那个**中间结果** $a_I$ 来**假装**是 "I" 的精华特征 $g_I$. 然后, 把这个假装的 $g_I$ (也就是 $a_I$) 和新猜出来的词 "do" 的信息 ($e_{do}$) 一起喂给小助手, 它又一番计算, 得到 $a_{do}$, 进而猜出下一个词 "it".
 
 整个Eagle-3的草稿模型是很小的, 通常只有3~4GB, 因此可以完全在Groq 3 LPU上放置. 由于整个LPX机柜有256卡, 其实我们还可以多放置几份Draft Model来提高并行处理.
 

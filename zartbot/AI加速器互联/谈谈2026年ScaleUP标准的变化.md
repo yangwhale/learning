@@ -8,7 +8,7 @@
 
 ### TL;DR
 
-这几天在参加ODCC**的夏季会议, 发现产业界有些有趣的变化. 特别是在ScaleUP互联上.  然后被大家吐槽说最近更新少了, 那么就补一篇吧...
+这几天在参加ODCC的夏季会议, 发现产业界有些有趣的变化. 特别是在ScaleUP互联上.  然后被大家吐槽说最近更新少了, 那么就补一篇吧...
 
 ### 1. 说个比较有趣的事情
 
@@ -18,7 +18,7 @@
 
 ![图片](assets/6a070424795f.jpg)
 
-差不多5~6年前NetDAM**的工作被人捡起来了, 挺高兴的. 其实我一直讲过, 手上做过的很多工作都是领先工业界五六年的存在. 特别是这几天还在和很多厂商讨论RDMA多路径的算法和一些跨AZ跨Region的需求. 3年前我们就完全做完了上生产了, 而且最近eRDMA**规模疯狂增长的同时, 只有一两个同学偶尔支持一下客户, 因为几乎没有遇到客户的工单.
+差不多5~6年前NetDAM的工作被人捡起来了, 挺高兴的. 其实我一直讲过, 手上做过的很多工作都是领先工业界五六年的存在. 特别是这几天还在和很多厂商讨论RDMA多路径的算法和一些跨AZ跨Region的需求. 3年前我们就完全做完了上生产了, 而且最近eRDMA规模疯狂增长的同时, 只有一两个同学偶尔支持一下客户, 因为几乎没有遇到客户的工单.
 
 例如某客户用来做自驾的模型训练, 最近很长一段时间, 没有发生像RoCE什么的网络中断/拥塞的投诉.. 然而Mellanox(Nvidia)似乎到现在为止, 还在不停的兜兜转转... 即便是OAI设计的什么MRC也是一坨....
 
@@ -37,30 +37,26 @@ UAlink的生态在逐渐变好, 参与的厂家也越来越多.
 然后这里稍微展开一下细节, SUE和UALink最大的区别是什么:
 
 ![图片](assets/2503c255ff50.png)
-SUE: Per-Destination Queue + WRR
-按 `{destination XPU, Virtual Channel}` 分离队列
 
-同一队列内的命令被机会性打包为单个 SUE PDU（最大 4096B）
+**SUE: Per-Destination Queue + WRR**
 
-Weighted Round-Robin 跨 VC 调度 + arrival-order within VC
-
-关键约束: 每个 PDU 只发往单一目的 XPU
-
-Work-conserving: 不会为打包延迟发送
+- 按 `{destination XPU, Virtual Channel}` 分离队列
+- 同一队列内的命令被机会性打包为单个 SUE PDU（最大 4096B）
+- Weighted Round-Robin 跨 VC 调度 + arrival-order within VC
+- 关键约束: 每个 PDU 只发往单一目的 XPU
+- Work-conserving: 不会为打包延迟发送
 
 SUE通常会在发送端的I/O Die上根据不同目的地的报文缓冲到不同队列中, 然后一个轮询调度器去发送报文到交换机. 交换机根据不同的dst 地址转发. 并在交换机出口队列上有一个缓冲, 最后再传输到目标GPU. 当出现Incast的情况时, 这个交换机的Egress队列很容易积压.
 
 ![图片](assets/46871cd96b0f.png)
-UALink: Unified Buffer + DL Flit Aggregation
-UPLI 各通道信号打包为 64B TL Flit（不区分目的地）
 
-DL 层收集多个 TL Flit 组装为 640B DL Flit
+**UALink: Unified Buffer + DL Flit Aggregation**
 
-核心特性: DL Flit 内部的 TL Flit 可以有不同目的地
-
-多级 Credit-based flow control（UPLI / TL / DL 各层独立）
-
-链路始终以满 Flit (640B) 传输 — 最大化带宽利用率
+- UPLI 各通道信号打包为 64B TL Flit（不区分目的地）
+- DL 层收集多个 TL Flit 组装为 640B DL Flit
+- 核心特性: DL Flit 内部的 TL Flit 可以有不同目的地
+- 多级 Credit-based flow control（UPLI / TL / DL 各层独立）
+- 链路始终以满 Flit (640B) 传输 — 最大化带宽利用率
 
 UALink产生的TL Flit 在发送端不区分目的GPU, 直接到一个独立的缓冲区, 当buffer内凑满一个DL Flit后, 直接转发到交换机, 交换机会对DL Flit内部的多个TL Flit逐个进行解析和转发到目标GPU的交换机端口的Egress缓冲区, Egress缓冲区内凑满一个DL Flit后,就会转发给目标GPU, 长尾延迟会好很多.
 
@@ -78,7 +74,7 @@ incast场景下, UALink会比SUE好很多.
 
 [《谈谈ESUN, SUE和UALink》](https://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247496512&idx=2&sn=0c10cef05fb1cc4e175f326d62b266e3&scene=21#wechat_redirect)
 
-以太网ScaleUP的始作俑者我承认是我, 大概2020年~2021年的时候伴随着NetDAM的项目就在弄, 思科比较愚蠢看不懂它的价值, 我就滚蛋离开了, 否则现在思科就不会傻傻的只能卖卖交换机芯片了. 差不多到了23~24年的时候在和BRCM**一起谈这个项目的时候, 我明确的给出了需要类似于Nvidia FinePack的需求, 我的意思是需要像UALink那样pack多个TL
+以太网ScaleUP的始作俑者我承认是我, 大概2020年~2021年的时候伴随着NetDAM的项目就在弄, 思科比较愚蠢看不懂它的价值, 我就滚蛋离开了, 否则现在思科就不会傻傻的只能卖卖交换机芯片了. 差不多到了23~24年的时候在和BRCM一起谈这个项目的时候, 我明确的给出了需要类似于Nvidia FinePack的需求, 我的意思是需要像UALink那样pack多个TL
 
 ![图片](assets/1aadaf481746.png)
 
@@ -92,7 +88,7 @@ incast场景下, UALink会比SUE好很多.
 
 当然BRCM也会说(狡辩), xxxxxx DSA都没问题啊. 仔细展开谈谈这些问题.
 
-通常DSA架构的 TensorCore 都比较大, 例如TPU是256x256 , LPU是320x320. 然后片上通常有一大块Buffer. 从Little’s Law**来看, 整个传输过程中大Buffer能够很好的处理长尾的影响, 另一方面较大的Tensor Core, operand的 Tile size都比较大, 因此也不需要考虑小的Flit.
+通常DSA架构的 TensorCore 都比较大, 例如TPU是256x256 , LPU是320x320. 然后片上通常有一大块Buffer. 从Little’s Law来看, 整个传输过程中大Buffer能够很好的处理长尾的影响, 另一方面较大的Tensor Core, operand的 Tile size都比较大, 因此也不需要考虑小的Flit.
 
 但是当你的GPU微架构是GPGPU的时候, 也就是说, Tensor Core 规模通常是16x16, 然后有较小的SM上的 SMEM , 每个SM的SMEM容量非常有限, 那么考虑Little’s Law 就对小size低延迟低长尾的需求非常依赖了.
 
