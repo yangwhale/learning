@@ -266,12 +266,14 @@ A category is `small` if it has a `small set` of `objects` and a `small s
 
 范畴论中的可复合性, 即对于 $f: A \rightarrow B$ 和 $g: B \rightarrow C$，存在一个复合(Composition) $g \circ f: A \rightarrow C$ 可以通过一个图表表示
 
-$$\require{AMScd}
+$$
+\require{AMScd}
 \begin{CD}
 A @>{f}>>B\\
 @VV{h}V @VV{g}V \\
- D @>{k}>> C
-\end{CD}$$
+D @>{k}>> C
+\end{CD}
+$$
 
 ![图片](assets/20a5599e0192.png)
 
@@ -413,12 +415,14 @@ Colfax的论文中还有一些Pushforward(推出)和pullback(拉回)相关的概
 
 **泛性质 (Universal Property)**: 对于`任何`其他满足类似条件的对象 $Q$ 和态射 $q_1: Q \rightarrow X$ 和 $q_2: Q \rightarrow Z$ (即 $f \circ q_1 = g \circ q_2$), 都`存在唯一`态射 $u: Q \rightarrow P$, 使得下图中的所有三角形都交换, 即: $p_1 \circ u = q_1$ 且 $p_2 \circ u = q_2$
 
-$$\require{AMScd}
+$$
+\require{AMScd}
 \begin{CD}
 P  @>{p_2}>> Y\\
 @VV{p_1}V @VV{g}V \\
 X @>{f}>> Z
-\end{CD}$$
+\end{CD}
+$$
 
 ![图片](assets/1ffa7e62e66f.png)
 
@@ -436,12 +440,14 @@ X @>{f}>> Z
 
 **泛性质 (Universal Property)**: 对于`任何`其他满足类似条件的对象 $Q$ 和态射 $j_1: X \rightarrow Q$, $j_2: Y \rightarrow Q$, 都`存在唯一`态射 $u: P \rightarrow Q$, 使得下图中的所有三角形都交换, 即: $u \circ i_1 = j_1$ 且 $u \circ i_2 = j_2$
 
-$$\require{AMScd}
+$$
+\require{AMScd}
 \begin{CD}
 P  @<{i_2}<< Y\\
 @AA{i_1}A @AA{g}A \\
 X @<{f}<< Z
-\end{CD}$$
+\end{CD}
+$$
 
 ![图片](assets/6f3802e324d0.png)
 
@@ -588,7 +594,10 @@ $$L_f = (s_1, \ldots, s_m) : (d_1, \ldots, d_m) $$
 
 其 Shape 是 $f$ 的定义域, 其 Stride 由下式给出:
 
-$$d_i = \begin{cases} t_1 \cdots t_{j-1} & \text{if } \alpha(i) = j \\ 0 & \text{if } \alpha(i) = * \end{cases} $$
+$$
+d_i = \begin{cases} t_1 \cdots t_{j-1} & \text{if } \alpha(i) = j \\
+0 & \text{if } \alpha(i) = * \end{cases}
+$$
 
 对于 $f:  (s_1, \ldots, s_m) \to (t_1, \ldots, t_n)$, Shape是一个定义域, 右侧 $(t_1, \ldots, t_n)$ 是一个中间表示(IR). 即 $\text{Shape} \rightarrow \text{IR}$. 实际上对于同一个Layout可以用多个IR表示. 例如一个Layout=(4,5):(1,64), IR表示可以为(4,16,5), (4,16,5,7), (4,2,8,5)等... 只需要能够满足Tuple范畴条件即可.
 
@@ -944,7 +953,10 @@ $$L_f = (s_1, \ldots, s_m)_P : (d_1, \ldots, d_m)_P $$
 
 其形状是 $f$ 的定义域, 其Stride由以下公式给出:
 
-$$d_i = \begin{cases} t_1 \cdots t_{j-1} & \text{if } \alpha(i) = j \\ 0 & \text{if } \alpha(i) = \ast \end{cases} $$
+$$
+d_i = \begin{cases} t_1 \cdots t_{j-1} & \text{if } \alpha(i) = j \\
+0 & \text{if } \alpha(i) = \ast \end{cases}
+$$
 
 我们可以在嵌套情况下定义**标准型 (standard form)** 和**非退化性 (non-degeneracy)**, 并再次得到一个对应定理.
 

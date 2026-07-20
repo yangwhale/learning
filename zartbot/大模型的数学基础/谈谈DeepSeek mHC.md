@@ -112,13 +112,19 @@ $$H_{k-1} = (h_{k-1}^1 \ h_{k-1}^2 \ \dots \ h_{k-1}^n)^\intercal \in \mathbb{R}
 
 Hyper-Connection 可以用一个矩阵 HC 来表示, 其中每个元素定义了一个连接权重. 该矩阵的结构如下:
 
-$$HC(H) = \begin{pmatrix} 0_{1 \times 1} & B(H) \\ A_m(H) & A_r(H) \end{pmatrix}$$
+$$
+HC(H) = \begin{pmatrix} 0_{1 \times 1} & B(H) \\
+A_m(H) & A_r(H) \end{pmatrix}
+$$
 
 ![图片](assets/a7b1e5a2c663.png)
 
 深度连接关注的是垂直方向的信息流动, 即输入与输出之间的关系,如上图 (c) 所示. 深度连接可以被解耦为如下矩阵 $DC(H)$:
 
-$$DC(H) = \begin{pmatrix} B(H) \\ \text{diag}(A_r(H)) \end{pmatrix}$$
+$$
+DC(H) = \begin{pmatrix} B(H) \\
+\text{diag}(A_r(H)) \end{pmatrix}
+$$
 
 宽度连接关注的是水平方向的信息流动, 即通道与通道之间的关系, 如上图 (d) 所示, 矩阵可以定义如下:
 
@@ -216,7 +222,12 @@ $$x_{l+1} = x_l + \mathcal{F}(x_l, W_l)$$
 
 当我们把这个公式从浅层 $l$ 递归地展开到深层 $L$ 时, 会得到:
 
-$$\begin{aligned} x_L &= x_{L-1} + \mathcal{F}(x_{L-1}, W_{L-1}) \\ &= (x_{L-2} + \mathcal{F}(x_{L-2}, W_{L-2})) + \mathcal{F}(x_{L-1}, W_{L-1}) \\ &= \dots \\ &= x_l + \sum_{i=l}^{L-1} \mathcal{F}(x_i, W_i) \end{aligned}$$
+$$
+\begin{aligned} x_L &= x_{L-1} + \mathcal{F}(x_{L-1}, W_{L-1}) \\
+&= (x_{L-2} + \mathcal{F}(x_{L-2}, W_{L-2})) + \mathcal{F}(x_{L-1}, W_{L-1}) \\
+&= \dots \\
+&= x_l + \sum_{i=l}^{L-1} \mathcal{F}(x_i, W_i) \end{aligned}
+$$
 
 现在我们来看HC的公式. HC首先将残差流扩展为 $n$ 个并行的流, 我们用一个 $n \times C$ 的矩阵 $x_l$ 来表示. 其单层更新规则为:
 
@@ -224,7 +235,12 @@ $$x_{l+1} = \mathcal{H}_{l}^{\text{res}} x_l + (\text{残差部分})$$
 
 这里的 $\mathcal{H}_{l}^{\text{res}}$ 是一个 $n \times n$ 的可学习矩阵. 让我们像之前一样, 把这个公式从浅层 $l$ 递归展开到深层 $L$. 为了简化, 我们暂时忽略残差部分, 只看主干的传播:
 
-$$\begin{aligned} x_L &= \mathcal{H}_{L-1}^{\text{res}} x_{L-1} + (\dots) \\ &= \mathcal{H}_{L-1}^{\text{res}} (\mathcal{H}_{L-2}^{\text{res}} x_{L-2}) + (\dots) \\ &= \dots \\ &= (\mathcal{H}_{L-1}^{\text{res}} \mathcal{H}_{L-2}^{\text{res}} \dots \mathcal{H}_{l}^{\text{res}}) x_l + (\text{残差部分}) \end{aligned}$$
+$$
+\begin{aligned} x_L &= \mathcal{H}_{L-1}^{\text{res}} x_{L-1} + (\dots) \\
+&= \mathcal{H}_{L-1}^{\text{res}} (\mathcal{H}_{L-2}^{\text{res}} x_{L-2}) + (\dots) \\
+&= \dots \\
+&= (\mathcal{H}_{L-1}^{\text{res}} \mathcal{H}_{L-2}^{\text{res}} \dots \mathcal{H}_{l}^{\text{res}}) x_l + (\text{残差部分}) \end{aligned}
+$$
 
 我们将这个复合映射记为 $\mathcal{H}_{\text{composite}} = \prod_{i=l}^{L-1} \mathcal{H}_{i}^{\text{res}}$. 那么:
 
@@ -300,7 +316,12 @@ $$x_{l+1} = \mathcal{H}_{l}^{\text{res}} x_l + (\mathcal{H}_{l}^{\text{post}})^\
 
 在HC的公式中, 可学习的映射由两部分系数组成: 依赖于输入的部分和全局的部分, 分别被称为动态映射 (dynamic mappings) 和静态映射 (static mappings). 形式上, HC如下计算这些系数:
 
-$$\begin{cases} \tilde{x}_l = \text{RMSNorm}(x_l) \\ \mathcal{H}_{l}^{\text{pre}} = \alpha_{l}^{\text{pre}} \cdot \tanh(\theta_{l}^{\text{pre}} \tilde{x}_l^\top) + b_{l}^{\text{pre}} \\ \mathcal{H}_{l}^{\text{post}} = \alpha_{l}^{\text{post}} \cdot \tanh(\theta_{l}^{\text{post}} \tilde{x}_l^\top) + b_{l}^{\text{post}} \\ \mathcal{H}_{l}^{\text{res}} = \alpha_{l}^{\text{res}} \cdot \tanh(\theta_{l}^{\text{res}} \tilde{x}_l^\top) + b_{l}^{\text{res}} \end{cases}$$
+$$
+\begin{cases} \tilde{x}_l = \text{RMSNorm}(x_l) \\
+\mathcal{H}_{l}^{\text{pre}} = \alpha_{l}^{\text{pre}} \cdot \tanh(\theta_{l}^{\text{pre}} \tilde{x}_l^\top) + b_{l}^{\text{pre}} \\
+\mathcal{H}_{l}^{\text{post}} = \alpha_{l}^{\text{post}} \cdot \tanh(\theta_{l}^{\text{post}} \tilde{x}_l^\top) + b_{l}^{\text{post}} \\
+\mathcal{H}_{l}^{\text{res}} = \alpha_{l}^{\text{res}} \cdot \tanh(\theta_{l}^{\text{res}} \tilde{x}_l^\top) + b_{l}^{\text{res}} \end{cases}
+$$
 
 其中RMSNorm(·)应用于最后一个维度, 标量 $\alpha_{l}^{\text{pre}}, \alpha_{l}^{\text{post}}$ 和 $\alpha_{l}^{\text{res}} \in \mathbb{R}$ 是被初始化为很小值的可学习门控因子.
 
@@ -448,7 +469,11 @@ $$\mathcal{P}_{\mathcal{M}_{\text{res}}}(\mathcal{H}_{l}^{\text{res}}) := \left\
 
 例子 ($n=3$),下面这个矩阵就是一个双随机矩阵:
 
-$$A = \begin{pmatrix} 0.5 & 0.2 & 0.3 \\ 0.1 & 0.7 & 0.2 \\ 0.4 & 0.1 & 0.5 \end{pmatrix}$$
+$$
+A = \begin{pmatrix} 0.5 & 0.2 & 0.3 \\
+0.1 & 0.7 & 0.2 \\
+0.4 & 0.1 & 0.5 \end{pmatrix}
+$$
 
 可以验证:
 
@@ -470,7 +495,10 @@ $$A = \begin{pmatrix} 0.5 & 0.2 & 0.3 \\ 0.1 & 0.7 & 0.2 \\ 0.4 & 0.1 & 0.5 \end
 
 例子 ($n=2$), 一个 $2 \times 2$ 的双随机矩阵形如:
 
-$$A = \begin{pmatrix} x & 1-x \\ 1-x & x \end{pmatrix}$$
+$$
+A = \begin{pmatrix} x & 1-x \\
+1-x & x \end{pmatrix}
+$$
 
 其中 $0 \le x \le 1$.这个集合在几何上是一条连接以下两个点的线段:
 
@@ -512,7 +540,12 @@ $$\mathcal{H}_{l}^{\text{res}} x_l = \left(\sum \theta_k P_k\right) x_l = \sum \
 
 然后, 遵循原始HC的公式来获得动态映射和静态映射, 如下所示:
 
-$$\begin{cases} \hat{x}'_l = \text{RMSNorm}(\hat{x}_l) \\ \tilde{\mathcal{H}}_{l}^{\text{pre}} = \alpha_{l}^{\text{pre}} \cdot (\hat{x}'_l \varphi_{l}^{\text{pre}}) + b_{l}^{\text{pre}} \\ \tilde{\mathcal{H}}_{l}^{\text{post}} = \alpha_{l}^{\text{post}} \cdot (\hat{x}'_l \varphi_{l}^{\text{post}}) + b_{l}^{\text{post}} \\ \tilde{\mathcal{H}}_{l}^{\text{res}} = \alpha_{l}^{\text{res}} \cdot \text{mat}(\hat{x}'_l \varphi_{l}^{\text{res}}) + b_{l}^{\text{res}} \end{cases}$$
+$$
+\begin{cases} \hat{x}'_l = \text{RMSNorm}(\hat{x}_l) \\
+\tilde{\mathcal{H}}_{l}^{\text{pre}} = \alpha_{l}^{\text{pre}} \cdot (\hat{x}'_l \varphi_{l}^{\text{pre}}) + b_{l}^{\text{pre}} \\
+\tilde{\mathcal{H}}_{l}^{\text{post}} = \alpha_{l}^{\text{post}} \cdot (\hat{x}'_l \varphi_{l}^{\text{post}}) + b_{l}^{\text{post}} \\
+\tilde{\mathcal{H}}_{l}^{\text{res}} = \alpha_{l}^{\text{res}} \cdot \text{mat}(\hat{x}'_l \varphi_{l}^{\text{res}}) + b_{l}^{\text{res}} \end{cases}
+$$
 
 其中 $\varphi_{l}^{\text{pre}}, \varphi_{l}^{\text{post}} \in \mathbb{R}^{nC \times n}$ 和 $\varphi_{l}^{\text{res}} \in \mathbb{R}^{nC \times n^2}$ 是用于动态映射的线性投影, 而 $\text{mat}(\cdot)$ 是一个从 $\mathbb{R}^{1 \times n^2}$ 到 $\mathbb{R}^{n \times n}$ 的reshape函数.
 
@@ -532,7 +565,11 @@ $$\begin{cases} \hat{x}'_l = \text{RMSNorm}(\hat{x}_l) \\ \tilde{\mathcal{H}}_{l
 
 然后, 最终的约束映射通过以下方式获得:
 
-$$\begin{cases} \mathcal{H}_{l}^{\text{pre}} = \sigma(\tilde{\mathcal{H}}_{l}^{\text{pre}}) \\ \mathcal{H}_{l}^{\text{post}} = 2\sigma(\tilde{\mathcal{H}}_{l}^{\text{post}}) \\ \mathcal{H}_{l}^{\text{res}} = \text{Sinkhorn-Knopp}(\tilde{\mathcal{H}}_{l}^{\text{res}}) \end{cases}$$
+$$
+\begin{cases} \mathcal{H}_{l}^{\text{pre}} = \sigma(\tilde{\mathcal{H}}_{l}^{\text{pre}}) \\
+\mathcal{H}_{l}^{\text{post}} = 2\sigma(\tilde{\mathcal{H}}_{l}^{\text{post}}) \\
+\mathcal{H}_{l}^{\text{res}} = \text{Sinkhorn-Knopp}(\tilde{\mathcal{H}}_{l}^{\text{res}}) \end{cases}
+$$
 
 其中 $\sigma(\cdot)$ 表示Sigmoid函数. $\text{Sinkhorn-Knopp}(\cdot)$ 算子首先通过一个指数算子使所有元素为正, 然后执行一个交替重新缩放行和列以使它们的和为1的迭代归一化过程.
 

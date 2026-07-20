@@ -235,7 +235,8 @@ $$
 这个想法是明确地对这类注意力偏置进行建模, 但不是通过重新利用输入序列中的现有token. 作者为每个头引入了额外的可学习参数 $k', v' \in R^d$. 具体来说, 给定输入QKV矩阵 $Q, K, V \in R^{T \times d}$, 带有显式注意力偏置的增强注意力计算如下:
 
 $$
-\text{Attention}(Q, K, V; k', v') = \text{softmax}\left(\frac{Q[K^T \quad k']}{\sqrt{d}}\right) \begin{bmatrix} V \\ v'^T \end{bmatrix} \quad (3)
+\text{Attention}(Q, K, V; k', v') = \text{softmax}\left(\frac{Q[K^T \quad k']}{\sqrt{d}}\right) \begin{bmatrix} V \\
+v'^T \end{bmatrix} \quad (3)
 $$
 
 其中 $k'$ 和 $v'$ 分别与Key和Value矩阵 $K/V$ 进行拼接. 所提出的注意力可以作为标准注意力的直接替代品, 无需修改Transformer的其他部分, 例如, 位置嵌入和MLP块.

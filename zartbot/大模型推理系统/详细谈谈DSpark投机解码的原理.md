@@ -150,7 +150,13 @@ $$(f(x))_+=\frac{\max(0,f(x))}{\sum_{x'}\max(0,f(x'))}$$
 
 最后, 我们计算拒绝的概率:
 
-$$\begin{aligned}\mathbb{P}(\tilde{x}\text{ rejected})&=1-\mathbb{P}(\tilde{x}\text{ accepted})\\&=1-\sum_{x'}\mathbb{P}(X=x',\tilde{x}\text{ accepted})\\&=1-\sum_{x'}\min(p(x'),q(x'))\\&=\sum_{x'}q(x')-\sum_{x'}\min(p(x'),q(x'))\\&=\sum_{x'}\max(0,q(x')-p(x'))\end{aligned}$$
+$$
+\begin{aligned}\mathbb{P}(\tilde{x}\text{ rejected})&=1-\mathbb{P}(\tilde{x}\text{ accepted})\\
+&=1-\sum_{x'}\mathbb{P}(X=x',\tilde{x}\text{ accepted})\\
+&=1-\sum_{x'}\min(p(x'),q(x'))\\
+&=\sum_{x'}q(x')-\sum_{x'}\min(p(x'),q(x'))\\
+&=\sum_{x'}\max(0,q(x')-p(x'))\end{aligned}
+$$
 
 这等于 $(q(x)-p(x))_+$ 的分母, 所以:
 
@@ -302,7 +308,10 @@ $$y_{S,n}\sim p_S(y\mid y_{<n})\quad\text{and}\quad y_{L,n}\sim p_L(y\mid y_{<n}
 
 根据策略函数 $\pi(y_{<n})$ 的返回值(布尔值), 决定使用哪个模型的预测:
 
-$$y_n=\begin{cases}y_{S,n},&\text{if }\pi(y_{<n})=0\\y_{L,n},&\text{if }\pi(y_{<n})=1\end{cases}$$
+$$
+y_n=\begin{cases}y_{S,n},&\text{if }\pi(y_{<n})=0\\
+y_{L,n},&\text{if }\pi(y_{<n})=1\end{cases}
+$$
 
 目标是设计一个轻量级策略, 使得在最小端到端延迟下获得高质量文本生成, 仅在必要时调用大模型.
 
@@ -348,7 +357,10 @@ $$z^*=\arg\min_z f(z),\quad\text{s.t. }z\in\{0,1\}^L$$
 **自适应阈值更新**: 静态阈值无法准确反映实际接受率. 为此引入动态更新规则:
 
 $$AR=\beta_1 AR+(1-\beta_1)\hat{AR}$$
-$$\gamma=\begin{cases}\gamma-\varepsilon,&\text{if }AR<\gamma\\\gamma+\varepsilon,&\text{otherwise}\end{cases}$$
+$$
+\gamma=\begin{cases}\gamma-\varepsilon,&\text{if }AR<\gamma\\
+\gamma+\varepsilon,&\text{otherwise}\end{cases}
+$$
 
 其中:
 
@@ -901,7 +913,10 @@ $$q_{\text{PAR}}(y_{t,b}\mid x)\propto\prod_{i=1}^{k}r_i(y_{t,i}\mid x)$$
 掩码定义
 对于两个树节点 $u$ 和 $v$, 掩码定义为:
 
-$$M_{v,u}=\begin{cases}0,&\text{if }u\in\text{Anc}(v)\cup\{v\}\\-\infty,&\text{otherwise}\end{cases}$$
+$$
+M_{v,u}=\begin{cases}0,&\text{if }u\in\text{Anc}(v)\cup\{v\}\\
+-\infty,&\text{otherwise}\end{cases}
+$$
 
 语义:
 

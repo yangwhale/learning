@@ -147,7 +147,12 @@ $\mathbb{F}_2$ 域上的矩阵是一个由0和1组成的二维数组.
 
 假设我们有一个矩阵 $A$ 和一个向量 $v$, 我们要计算 $w = Av$.
 
-$$A = \begin{bmatrix} 1 & 1 & 0 \\ 0 & 1 & 1 \end{bmatrix}, \quad v = \begin{bmatrix} 1 \\ 0 \\ 1 \end{bmatrix}$$
+$$
+A = \begin{bmatrix} 1 & 1 & 0 \\
+0 & 1 & 1 \end{bmatrix}, \quad v = \begin{bmatrix} 1 \\
+0 \\
+1 \end{bmatrix}
+$$
 
 我们来计算结果 $w = \begin{bmatrix} w_0 \\ w_1 \end{bmatrix}$:
 
@@ -609,7 +614,10 @@ $$\text{offset} = \left(\left(\frac{i}{\text{per\_phase}} \bmod \text{max\_phase
 
 计算上述映射的逆会揭示, 对于一个 $2^m \times 2^n$ 的张量, 与 mma swizzling 关联的线性布局的矩阵表示具有如下结构:
 
-$$\begin{bmatrix} I_n & C \\ 0 & I_m \end{bmatrix}$$
+$$
+\begin{bmatrix} I_n & C \\
+0 & I_m \end{bmatrix}
+$$
 
 $C$ 中的每一行 $c_i$ 由以下公式得出
 

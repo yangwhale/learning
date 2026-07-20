@@ -368,7 +368,13 @@ $$k_t^{(1)} = W_K^{(1)} e_t, \quad k_t^{(2)} = W_K^{(2)} e_t, \quad \dots, \quad
 
 将上述 $M+1$ 个独立的投影操作融合成了一次计算, 即将所有 Key 投影矩阵 $W_K^{(m)}$ 和共享的 Value 投影矩阵 $W_V$ 在维度上拼接起来, 形成一个更大的、统一的投影矩阵 $W_{\text{fused}}$:
 
-$$W_{\text{fused}} = \begin{bmatrix} W_K^{(1)} \\ W_K^{(2)} \\ \vdots \\ W_K^{(M)} \\ W_V \end{bmatrix}$$
+$$
+W_{\text{fused}} = \begin{bmatrix} W_K^{(1)} \\
+W_K^{(2)} \\
+\vdots \\
+W_K^{(M)} \\
+W_V \end{bmatrix}
+$$
 
 然后, 只需进行一次矩阵乘法:
 

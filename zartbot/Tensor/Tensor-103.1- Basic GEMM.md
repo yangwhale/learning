@@ -50,28 +50,33 @@ $$C = \alpha * A * B + \beta * C$$
 
 详细内容可以参考《Tensor-001 矩阵乘法分块乘法概述》, 这里做一个简要描述,  通常我们可以把一个矩阵分成多个块, 例如
 
-$$P = 
+$$
+P = 
 \begin{bmatrix}
 1 & 2 & 3 & 4\\
 5 & 6 & 7 & 8\\
 9 & 10 & 11 & 12 \\
 13 & 14 & 15 & 16
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 我们可以将其划分为 4个块
 
-$$P = 
+$$
+P = 
 \begin{bmatrix}
 1 & 2 & | & 3 & 4\\
 5 & 6 & | & 7 & 8\\
 - & - & + & - & - \\
 9 & 10 & | & 11 & 12 \\
 13 & 14 & |  & 15 & 16
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 我们可以记为:
 
-$$P_{11} = 
+$$
+P_{11} = 
 \begin{bmatrix}
 1 & 2 \\
 5 & 6 
@@ -94,19 +99,23 @@ P_{22} =
 \begin{bmatrix}
 11 & 12 \\
 15 & 16 
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 分块后的矩阵记为
 
-$$P = 
+$$
+P = 
 \begin{bmatrix}
 P_{11} & P_{12} \\
 P_{21} & P_{22}
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 分块矩阵乘法如下所示:
 
-$$\begin{bmatrix}
+$$
+\begin{bmatrix}
 A_{11}&A_{12}\\
 A_{21}&A_{22}
 \end{bmatrix}
@@ -120,7 +129,8 @@ B_{21}&B_{22}
 \begin{bmatrix}
 A_{11}B_{11}+A_{12}B_{21} & A_{11}B_{12}+A_{12}B_{22}\\
 A_{21}B_{11}+A_{22}B_{21} & A_{21}B_{12}+A_{22}B_{22}
-\end{bmatrix}$$
+\end{bmatrix}
+$$
 
 更一般的来讲, 如下图所示:
 
@@ -128,23 +138,27 @@ A_{21}B_{11}+A_{22}B_{21} & A_{21}B_{12}+A_{22}B_{22}
 
 给定一个 $(m \times k)$ 的矩阵 $A$ 切分为 $q$ 行 $s$ 列
 
-$$A=
+$$
+A=
 \begin{bmatrix}
  A_{11} & A_{12} & \cdots & A_{1s}      \\
- A_{21} & A_{22} & \cdots & A_{2s}      \\
- \vdots & \vdots & \ddots & \vdots      \\
- A_{q1} & A_{q2} & \cdots & A_{qs}      
-\end{bmatrix}$$
+A_{21} & A_{22} & \cdots & A_{2s}      \\
+\vdots & \vdots & \ddots & \vdots      \\
+A_{q1} & A_{q2} & \cdots & A_{qs}      
+\end{bmatrix}
+$$
 
 另一个 $(k \times n)$ 的矩阵 $B$ 切分为 $s$ 行 $r$ 列,
 
-$$B=
+$$
+B=
 \begin{bmatrix}
  B_{11} & B_{12} & \cdots & B_{1r}      \\
- B_{21} & B_{22} & \cdots & B_{2r}      \\
- \vdots & \vdots & \ddots & \vdots      \\
- B_{s1} & B_{s2} & \cdots & B_{sr}      
-\end{bmatrix}$$
+B_{21} & B_{22} & \cdots & B_{2r}      \\
+\vdots & \vdots & \ddots & \vdots      \\
+B_{s1} & B_{s2} & \cdots & B_{sr}      
+\end{bmatrix}
+$$
 
 则它们的乘积 $C=AB$ 计算如下:
 
