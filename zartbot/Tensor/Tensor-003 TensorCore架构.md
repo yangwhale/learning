@@ -10,7 +10,12 @@
 
 TensorCore的演进如下:
 
-ArchDtypeTC per SMTC m,n,k稀疏访存支持指令Volta(SM70)FP1684 x 4 x 4NoN/AmmaTuring(SM75)FP16,INT8,INT4,Binary84 x 4 x 4Noldmatrixmma,ldmatrixAmpere(SM80)FP16,BF16,TF32,FP64,INT8,INT4,Binary48 x 4 x 8Yesasync Copymma,ldmatrix, mma.spHopper(SM90)FP16,BF16,TF32,FP64,INT8,Binary48 x 4 x 16YesTMAmma,ldmatrix, mma.sp  ,wgmma
+| Arch | Dtype | TC per SM | TC m,n,k | 稀疏 | 访存 | 支持指令 |
+|---|---|---|---|---|---|---|
+| Volta(SM70) | FP16 | 8 | 4 x 4 x 4 | No | N/A | mma |
+| Turing(SM75) | FP16,INT8,INT4,Binary | 8 | 4 x 4 x 4 | No | ldmatrix | mma,ldmatrix |
+| Ampere(SM80) | FP16,BF16,TF32,FP64,INT8,INT4,Binary | 4 | 8 x 4 x 8 | Yes | async Copy | mma,ldmatrix, mma.sp |
+| Hopper(SM90) | FP16,BF16,TF32,FP64,INT8,Binary | 4 | 8 x 4 x 16 | Yes | TMA | mma,ldmatrix, mma.sp ,wgmma |
 
 可以看到从最早的FMA指令, 到向量化的DP4A,再到Volta(SM70)的第一代TensorCore,然后Ampere/Hopper都在提高矩阵乘法的规模, 提高计算访存比,同时支持更低精度的数据格式.
 ![图片](assets/ed338feb8f04.png)
@@ -23,7 +28,7 @@ ArchDtypeTC per SMTC m,n,k稀疏访存支持指令Volta(SM70)FP1684 x 4 x 4NoN/A
 
 ## 1. Tensor Core概述
 
-对于一个的矩阵乘法, 计算量为, 访存量为, 计算访存比, 简化问题考虑的情况, 计算访存比为, 因此在数据存储和访问时的复用非常必要.
+对于一个 $M \times N \times K$ 的矩阵乘法, 计算量为 $C= 2\times M \times N \times K \sim \mathcal O(N^3)$, 访存量为 $D = M \times K + K \times N + 2 \times M \times N \sim \mathcal O(N^2)$, 计算访存比 $C/D \sim \mathcal O(N)$, 简化问题考虑 $M=N=K$ 的情况, 计算访存比为 $N/2$, 因此在数据存储和访问时的复用非常必要.
 
 在一个Warp内, Thread计算时的效率还可以进一步并行提升, 特别是WarpLevel的寄存器文件复用上, 这就是Tensor Core诞生的原因. 第一代TensorCore在Volta架构出现
 
@@ -92,7 +97,16 @@ nvcc -c -arch sm_70 --ptx  tmp2.cu .visible .entry _Z9test_wmmaP6__halfS0_S0_(	.
 
 对于一个16x16矩阵,平均分配到一个WARP的32个线程中,每个线程需要8个寄存器存放. 一个WARP内的线程id通过`%laneid`寄存器表示,取值范围`[0,31]`. 在V100中每四个线程分为一组(ThreadGroup), 即0−3, 4−7, 8−11, 12−15, 16−19, 20−23, 24−27,28 − 31. 然后将四个一组的线程配对, 在NV的文档中将其称为`Quad Pair(QP)`, 例如QP0包含0-3,16-19, QP1包含4-7,20-23如下表所示:
 
-%laneidQPThreadGroup0~3004~7118~112212~153316~190420~231524~272628~3137
+| %laneid | QP | ThreadGroup |
+|---|---|---|
+| 0~3 | 0 | 0 |
+| 4~7 | 1 | 1 |
+| 8~11 | 2 | 2 |
+| 12~15 | 3 | 3 |
+| 16~19 | 0 | 4 |
+| 20~23 | 1 | 5 |
+| 24~27 | 2 | 6 |
+| 28~31 | 3 | 7 |
 
 HMMA.884指令在QP上加载, 如下所示
 
@@ -158,7 +172,12 @@ HMMA.884指令在QP上加载, 如下所示
 
 对已有的TensorCore(TC)四代进行了整理,如下所示:
 
-ArchDtypeTC per SMTC m,n,k稀疏访存支持指令Volta(SM70)FP1684 x 4 x 4NoN/AmmaTuring(SM75)FP16,INT8,INT4,Binary84 x 4 x 4Noldmatrixmma,ldmatrixAmpere(SM80)FP16,BF16,TF32,FP64,INT8,INT4,Binary48 x 4 x 8Yesasync Copymma,ldmatrix, mma.spHopper(SM90)FP16,BF16,FP8,TF32,FP64,INT8,Binary48 x 4 x 16YesTMAmma,ldmatrix, mma.sp  ,wgmma
+| Arch | Dtype | TC per SM | TC m,n,k | 稀疏 | 访存 | 支持指令 |
+|---|---|---|---|---|---|---|
+| Volta(SM70) | FP16 | 8 | 4 x 4 x 4 | No | N/A | mma |
+| Turing(SM75) | FP16,INT8,INT4,Binary | 8 | 4 x 4 x 4 | No | ldmatrix | mma,ldmatrix |
+| Ampere(SM80) | FP16,BF16,TF32,FP64,INT8,INT4,Binary | 4 | 8 x 4 x 8 | Yes | async Copy | mma,ldmatrix, mma.sp |
+| Hopper(SM90) | FP16,BF16,FP8,TF32,FP64,INT8,Binary | 4 | 8 x 4 x 16 | Yes | TMA | mma,ldmatrix, mma.sp ,wgmma |
 
 TensorCore的四代演进主要包含几个方向:
 

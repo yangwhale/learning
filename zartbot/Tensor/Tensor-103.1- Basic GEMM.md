@@ -20,7 +20,7 @@
 
 GEMM(GEneral Matrix-Matrix multiplication) 是线性代数库BLAS（Basic Linear Algebra Subprograms）中的一个核心操作. 其标准形式为：
 
-![图片](assets/3dbe20d3783a.png)
+$$C = \alpha * A * B + \beta * C$$
 
 **A**: M x K 矩阵
 
@@ -28,7 +28,7 @@ GEMM(GEneral Matrix-Matrix multiplication) 是线性代数库BLAS（Basic Linear
 
 **C**: M x N 矩阵 (输入和输出)
 
-****: 标量 (常数)
+**$\alpha,\beta$**: 标量 (常数)
 
 它是科学和工程计算的核心构建块. 在深度学习中
 
@@ -44,27 +44,111 @@ GEMM(GEneral Matrix-Matrix multiplication) 是线性代数库BLAS（Basic Linear
 // 假设 A, B, C 都是行主序存储// C = A * B (为简化，令 alpha=1, beta=0)for (int i = 0; i < M; ++i)    for (int j = 0; j < N; ++j)        for (int k = 0; k < K; ++k)             C[i][j] += A[i][k] * B[k][j];}
 ```
 
-这个算法的计算复杂度是 。
+这个算法的计算复杂度是 $\mathcal O(M * N * K)$。
 
 ### 1.2 分块矩阵乘法
 
 详细内容可以参考《Tensor-001 矩阵乘法分块乘法概述》, 这里做一个简要描述,  通常我们可以把一个矩阵分成多个块, 例如
 
+$$P = 
+\begin{bmatrix}
+1 & 2 & 3 & 4\\
+5 & 6 & 7 & 8\\
+9 & 10 & 11 & 12 \\
+13 & 14 & 15 & 16
+\end{bmatrix}$$
+
 我们可以将其划分为 4个块
+
+$$P = 
+\begin{bmatrix}
+1 & 2 & | & 3 & 4\\
+5 & 6 & | & 7 & 8\\
+- & - & + & - & - \\
+9 & 10 & | & 11 & 12 \\
+13 & 14 & |  & 15 & 16
+\end{bmatrix}$$
 
 我们可以记为:
 
-分块后的矩阵记为分块矩阵乘法如下所示:
+$$P_{11} = 
+\begin{bmatrix}
+1 & 2 \\
+5 & 6 
+\end{bmatrix}
+
+,
+P_{12} = 
+\begin{bmatrix}
+3 & 4 \\
+7 & 8 
+\end{bmatrix}
+,
+P_{21} = 
+\begin{bmatrix}
+9 & 10 \\
+13 & 14 
+\end{bmatrix}
+,
+P_{22} = 
+\begin{bmatrix}
+11 & 12 \\
+15 & 16 
+\end{bmatrix}$$
+
+分块后的矩阵记为
+
+$$P = 
+\begin{bmatrix}
+P_{11} & P_{12} \\
+P_{21} & P_{22}
+\end{bmatrix}$$
+
+分块矩阵乘法如下所示:
+
+$$\begin{bmatrix}
+A_{11}&A_{12}\\
+A_{21}&A_{22}
+\end{bmatrix}
+
+\begin{bmatrix}
+B_{11}&B_{12}\\
+B_{21}&B_{22}
+\end{bmatrix}
+
+=
+\begin{bmatrix}
+A_{11}B_{11}+A_{12}B_{21} & A_{11}B_{12}+A_{12}B_{22}\\
+A_{21}B_{11}+A_{22}B_{21} & A_{21}B_{12}+A_{22}B_{22}
+\end{bmatrix}$$
 
 更一般的来讲, 如下图所示:
 
 ![图片](assets/cd8401b6e386.png)
 
-给定一个的矩阵切分为行列
+给定一个 $(m \times k)$ 的矩阵 $A$ 切分为 $q$ 行 $s$ 列
 
-另一个的矩阵切分为行列,
+$$A=
+\begin{bmatrix}
+ A_{11} & A_{12} & \cdots & A_{1s}      \\
+ A_{21} & A_{22} & \cdots & A_{2s}      \\
+ \vdots & \vdots & \ddots & \vdots      \\
+ A_{q1} & A_{q2} & \cdots & A_{qs}      
+\end{bmatrix}$$
 
-则它们的乘积计算如下:
+另一个 $(k \times n)$ 的矩阵 $B$ 切分为 $s$ 行 $r$ 列,
+
+$$B=
+\begin{bmatrix}
+ B_{11} & B_{12} & \cdots & B_{1r}      \\
+ B_{21} & B_{22} & \cdots & B_{2r}      \\
+ \vdots & \vdots & \ddots & \vdots      \\
+ B_{s1} & B_{s2} & \cdots & B_{sr}      
+\end{bmatrix}$$
+
+则它们的乘积 $C=AB$ 计算如下:
+
+$$C_{\alpha\beta} = \sum_{\gamma=1}^s A_{\alpha\gamma}B_{\gamma\beta}$$
 
 相应的乘法循环代码如下
 
@@ -86,128 +170,27 @@ for (int m = 0; m < M; m += Mtile)                // iterate over M d
 
 ### 1.3 TensorCore
 
-对于一个的矩阵乘法, 计算量为, 访存量为, 计算访存比, 简化问题考虑的情况, 计算访存比为, 因此在数据存储和访问时的复用非常必要. 在一个Warp内, Thread计算时的效率还可以进一步并行提升, 特别是WarpLevel的寄存器文件复用上, 这就是Tensor Core诞生的原因.
+对于一个 $M,N,K$ 的矩阵乘法, 计算量为 $C= 2\times M \times N \times K \sim \mathcal O(N^3)$, 访存量为 $D = M \times K + K \times N + 2 \times M \times N \sim \mathcal O(N^2)$, 计算访存比 $C/D \sim \mathcal O(N)$, 简化问题考虑 $M=N=K$ 的情况, 计算访存比为 $N/2$, 因此在数据存储和访问时的复用非常必要. 在一个Warp内, Thread计算时的效率还可以进一步并行提升, 特别是WarpLevel的寄存器文件复用上, 这就是Tensor Core诞生的原因.
 
 第一代TensorCore在Volta架构出现, TensorCore架构也演进了很多代, 从TensorCore的计算数值精度上来看
 
-Arch
-
-FP64
-
-FP16
-
-INT8
-
-INT4
-
-FP8
-
-MXFP
-
-Volta
-
-❌
-
-✅ FP16
-
-❌
-
-❌
-
-❌
-
-❌
-
-Turing
-
-❌
-
-✅ FP16
-
-✅
-
-✅
-
-❌
-
-❌
-
-Ampere
-
-✅
-
-✅ FP16/BF16
-
-✅
-
-✅
-
-❌
-
-❌
-
-Hopper
-
-✅
-
-✅ FP16/BF16
-
-✅
-
-❌
-
-⚠️FP8/FP22
-
-❌
-
-Blackwell
-
-✅
-
-✅ FP16/BF16
-
-✅
-
-❌
-
-✅
-
-✅ MXFP(8/6/4)
-NVFP4
-
-Blackwell Ultra
-
-⚠️砍算力
-
-✅ FP16/BF16
-
-⚠️砍算力
-
-❌
-
-✅
-
-✅ MXFP(8/6/4)
-NVFP4
+| Arch | FP64 | FP16 | INT8 | INT4 | FP8 | MXFP |
+|---|---|---|---|---|---|---|
+| Volta | ❌ | ✅ FP16 | ❌ | ❌ | ❌ | ❌ |
+| Turing | ❌ | ✅ FP16 | ✅ | ✅ | ❌ | ❌ |
+| Ampere | ✅ | ✅ FP16/BF16 | ✅ | ✅ | ❌ | ❌ |
+| Hopper | ✅ | ✅ FP16/BF16 | ✅ | ❌ | ⚠️FP8/FP22 | ❌ |
+| Blackwell | ✅ | ✅ FP16/BF16 | ✅ | ❌ | ✅ | ✅ MXFP(8/6/4) NVFP4 |
+| Blackwell Ultra | ⚠️砍算力 | ✅ FP16/BF16 | ⚠️砍算力 | ❌ | ✅ | ✅ MXFP(8/6/4) NVFP4 |
 
 从访问内存来看, 每个操作数矩阵可以存放的内存位置如下, 特别来说在Blackwell中还引入了tensor memory
 
-Arch
-
-Matrix A
-
-MatrixB
-
-MatrixD
-
-Volta
-RFRFRF
-Ampere
-RFRFRF
-Hopper
-RF/SMEMSMEMRF
-Blackwell
-TMEM/SMEMSMEMTMEM
+| Arch | Matrix A | Matrix B | Matrix D |
+|---|---|---|---|
+| Volta | RF | RF | RF |
+| Ampere | RF | RF | RF |
+| Hopper | RF/SMEM | SMEM | RF |
+| Blackwell | TMEM/SMEM | SMEM | TMEM |
 
 指令调用上, Volta上一个warp被拆成了每4个线程一组的QuadPair, 然后同步在整个WARP调用4条指令完成计算. 到Ampere开始变成了一个完整的warp-level的同步调用. 再到Hopper增加了warpgroup-level的异步调用能力, 而在Blackwell上, 由于操作数完全不占用寄存器(全部可以存放在TMEM/SMEM上)则可以实现完全异步的调用.
 
@@ -239,19 +222,19 @@ TMEM/SMEMSMEMTMEM
 
 另一方面, 把它作为一个baseline, 然后再介绍Hopper和Blackwell微架构的演进, 也是非常具有价值的. 例如它使用了cp.async, 但是考虑到访问越界的情况, 需要额外的谓词张量(Preidication Tensor)防止越界, 然后在Hopper上通过TMA很干净的解决了. 个人觉得需要了解原来实现的复杂性, 才能进一步了解整个架构的演进过程.
 
-我们继续回到矩阵分块乘法本身, 通常我们以结果  矩阵的分块来排布Thread Block, 然后在每个Thread Block内构建Kernel函数执行.
+我们继续回到矩阵分块乘法本身, 通常我们以结果 $C$ 矩阵的分块来排布Thread Block, 然后在每个Thread Block内构建Kernel函数执行.
 
 ![图片](assets/5e5df288be85.png)
 
-因此在Kernel launch时, grid =(,, 1), 其中 为原始存放在GMEM中的矩阵  的Shape, 而  则是矩阵分块乘法中, 每个Thread Block (在很多文档中也被称为Cooperative thread array,CTA)需要处理的Tile的Size.
+因此在Kernel launch时, grid =($\lceil \frac{M}{\_bM} \rceil$, $\lceil \frac{N}{\_bN} \rceil$, 1), 其中 $M,N,K$ 为原始存放在GMEM中的矩阵 $gA,gB,gC$ 的Shape, 而 $\_bM,\_bN,\_bK$ 则是矩阵分块乘法中, 每个Thread Block (在很多文档中也被称为Cooperative thread array,CTA)需要处理的Tile的Size.
 
 每个CTA都会运行一个相同的Kernel代码来处理数据, 大致的数据流程是:
 
-从GMEM中拷贝Tile到SMEM, 即构成  这两个Tile. 因此需要关于它们的Layout,并准备一个`TileCopy`对象描述如何拷贝.
+从GMEM中拷贝Tile到SMEM, 即构成 $sA,sB$ 这两个Tile. 因此需要关于它们的Layout,并准备一个`TileCopy`对象描述如何拷贝.
 
 然后针对CTA, 选择用哪一种一种Tile based矩阵乘法操作, 例如使用CUDA Core的FMA指令或者使用TensorCore的MMA指令. 不同的指令还有不同的`MMA_Layout`, 因此也需要一个封装`TiledMMA`对象来描述.
 
-最后例如矩阵是需要计算时, 还需要在分块的矩阵乘法做完后再做一些处理, 缩放  并加上. 当然还有一些深度学习相关的其它算法, 例如算ReLU等. Cutlass把这些都抽象成了一个`Epilogue`过程. 例如下图所示.
+最后例如矩阵 $C = \alpha * A * B + \beta * C$ 是需要计算时, 还需要在分块的矩阵乘法做完后再做一些处理, 缩放 $\alpha$ 并加上 $\beta C$. 当然还有一些深度学习相关的其它算法, 例如算ReLU等. Cutlass把这些都抽象成了一个`Epilogue`过程. 例如下图所示.
 
 ![图片](assets/f3e6a336e7ec.png)
 
@@ -274,6 +257,10 @@ TMEM/SMEMSMEMTMEM
 ```
 
 然后在可以通过cute.make_layout函数构建sA_Layout和sB_Layout. 需要注意的是, 通常为了隐藏内存访问的延迟, 在计算时采用`num_stages`多级流水线的方式来处理, 因此在分配A和B在SMEM中的Tile时, 还需要增加一个num_stage的维度. 默认的Layout是
+
+$$TileA \rightarrow (\_bM,\_bK, num\_stages):(1,\_bM,\_bM * \_bK)$$
+
+$$TileB \rightarrow (\_bN,\_bK, num\_stages):(1 , \_bN,\_bN * \_bK)$$
 
 在example里还考虑到了访问内存bank-conflict的问题, 通过增加padding的方式来解决
 
@@ -377,7 +364,7 @@ num_threads = 256_bM , _bN , _bK = 128 , 128 , 8@cute.jitdef tiled_mma( 
         # Thread and block indices        tidx, tidy, tidz = cute.arch.thread_idx()        bidx, bidy, bidz = cute.arch.block_idx()        tiler_coord = (bidx, bidy, None)                thr_mma = tiled_mma.get_slice(tidx)
 ```
 2.1.3.1 TileCopy Layout
-然后根据tiler_coord和CTA_Tiler, 即  构成的元组来获取local_tile. 注意由于cta_tiler和tiler_coord都是3维的, 因此通过proj元组来确定需要的维度.
+然后根据tiler_coord和CTA_Tiler, 即 $[\_bM,\_bN,\_bK]=(128,128,8)$ 构成的元组来获取local_tile. 注意由于cta_tiler和tiler_coord都是3维的, 因此通过proj元组来确定需要的维度.
 
 ```
         # ///////////////////////////////////////////////////////////////////////////////        # Get the appropriate tiles for this thread block.        # gA: (BLK_M, BLK_K, k), gB: (BLK_N, BLK_K, k), gC: (BLK_M, BLK_N)        # ///////////////////////////////////////////////////////////////////////////////        gA = cute.local_tile(            mA, tiler=self._cta_tiler, coord=tiler_coord, proj=(1, None, 1) #select M, K dim, tiler=(128,8)        )        gB = cute.local_tile(            mB, tiler=self._cta_tiler, coord=tiler_coord, proj=(None, 1, 1) #select N, K dim, tiler=(128,8)        )        gC = cute.local_tile(            mC, tiler=self._cta_tiler, coord=tiler_coord, proj=(1, 1, None) #select M, N dim, tiler=(128,128)        )
@@ -389,7 +376,7 @@ num_threads = 256_bM , _bN , _bK = 128 , 128 , 8@cute.jitdef tiled_mma( 
         if (tidx, tidy, bidx, bidy ) == (0, 0, 1, 0) :            cute.printf("gA {}",gA)            cute.printf("gB {}",gB)#output          gA raw_ptr(0x0000781f44200400: f32, gmem, align<16>) o (128,8,513):(4098,1,8) =   ( 2.232828, -0.914160, -0.434011, 0.241222, -0.203234, -0.858159, -1.057811, -0.276097, -1.159224, -0.202816, -0.339250, 0.847252, 0.282905, -0.242454, 0.251689, -1.054146, -0.730669, 1.360016, -0.043775, 2.123710, 1.541446, -0.778495, -0.293049, 0.340791, 1.854621, -0.315319, -0.030140, 0.353239, 2.685961, 0.276291, 0.416161, [...] )gB raw_ptr(0x0000781f3e000000: f32, gmem, align<16>) o (128,8,513):(4098,1,8) =   ( -0.107501, 1.378693, -0.589159, -0.628105, -0.784239, -0.085578, -1.613212, 0.500337, 0.196457, -0.388494, 0.130661, 0.322285, -0.098240, 0.765472, -0.916214, 1.665686, -1.892140, 1.230363, 1.912450, -0.432180, -0.306490, -0.753587, 0.533725, -1.154443, -0.092635, 0.996614, 0.718422, -0.614310, 0.130793, -0.219224, 0.902878, [...] )
 ```
 
-然后我们需要考虑边界情况, K在进行 , 则K这个维度的残差为, 然后通过cute.domain_offset将gA/gB的指针移动按照`-k`的方向移动, 使得第一个Tile是成为一个不规则的Tile.
+然后我们需要考虑边界情况, K在进行 $\text{gA.shape[2]}=\lceil\frac{K}{\_bK} \rceil = 513$, 则K这个维度的残差为 $K - \lceil\frac{K}{\_bK} \rceil * \_bK = 4098 - 513 * 8 =-6$, 然后通过cute.domain_offset将gA/gB的指针移动按照`-k`的方向移动, 使得第一个Tile是成为一个不规则的Tile.
 
 ![图片](assets/471ec6b0940a.png)
 

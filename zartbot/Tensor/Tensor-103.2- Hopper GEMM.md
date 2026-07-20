@@ -11,7 +11,44 @@
 这是整个Tensor-103 Gemm系列文章的第二篇, 第一篇介绍了基于CuteDSL的basic gemm kernel实现, 这一篇首先分析了Basic Gemm的一些问题, 然后展开分析Hopper的硬件架构和软件协同如何来解决这些问题的. 最后再用CuteDSL的hopper Gemm例子进行详细的分解分析. 本文目录如下:
 
 ```
-1. Hopper 软硬件功能演进概述1.1 Basic Gemm的问题1.1.1 cp.async1.1.2 TensorCore1.2 Hopper架构演进1.2.1 TMA1.2.2 CGA1.2.3 TensorCore & WGMMA1.2.4 Warp Specialization 2. Hopper新功能详解2.1 CGA2.1.1 基本操作2.1.2 Grid/Cluster Layout2.2 TMA2.2.1 TMA架构分析2.2.2 TMA指令和描述符2.2.3 TMA地址计算及请求生成2.2.4 TMA同步机制2.2.5 TMA组播2.2.6 TMA Reduce2.2.7 CuteDSL TMA操作2.3 TensorCore WGMMA2.3.1 WGMMA编程概述2.3.2 Swizzle2.3.3 CuteDSL WGMMA2.4 CuteDSL异步编程2.4.1 PipelineAsync2.4.2 PipelineTmaAsync2.4.3 PipelineTmaStore2.5 小结3. Hopper DenseGemm3.1 Host侧函数3.2 Kernel函数3.2.1 第一阶段: 初始化和坐标计算3.2.2 第二阶段: 流水线设置与内存分区3.2.3 第三阶段: Prologue3.2.4 第四阶段: MainLoop3.2.5 第五阶段: Epilogue
+1. Hopper 软硬件功能演进概述
+1.1 Basic Gemm的问题
+1.1.1 cp.async
+1.1.2 TensorCore
+1.2 Hopper架构演进
+1.2.1 TMA
+1.2.2 CGA
+1.2.3 TensorCore & WGMMA
+1.2.4 Warp Specialization
+2. Hopper新功能详解
+2.1 CGA
+2.1.1 基本操作
+2.1.2 Grid/Cluster Layout
+2.2 TMA
+2.2.1 TMA架构分析
+2.2.2 TMA指令和描述符
+2.2.3 TMA地址计算及请求生成
+2.2.4 TMA同步机制
+2.2.5 TMA组播
+2.2.6 TMA Reduce
+2.2.7 CuteDSL TMA操作
+2.3 TensorCore WGMMA
+2.3.1 WGMMA编程概述
+2.3.2 Swizzle
+2.3.3 CuteDSL WGMMA
+2.4 CuteDSL异步编程
+2.4.1 PipelineAsync
+2.4.2 PipelineTmaAsync
+2.4.3 PipelineTmaStore
+2.5 小结
+3. Hopper DenseGemm
+3.1 Host侧函数
+3.2 Kernel函数
+3.2.1 第一阶段: 初始化和坐标计算
+3.2.2 第二阶段: 流水线设置与内存分区
+3.2.3 第三阶段: Prologue
+3.2.4 第四阶段: MainLoop
+3.2.5 第五阶段: Epilogue
 ```
 
 ## 1. Hopper 软硬件功能演进概述
@@ -72,22 +109,12 @@ TMA具体的操作在[《Tensor-003 TensorCore架构》](https://mp.weixin.qq.co
 
 然后我们再来看TensorCore, 在Ampere中的TensorCore操作数依旧需要占用寄存器资源, 并且需要用户将SMEM中的数据搬运到RMEM中. 因此在Hopper中针对这个情况也进行了优化, Matrix A和 Matrix B都可以直接放置在SMEM让TensorCore读取, 这样就避免了寄存器资源的占用. 而针对结果的 Matrix D则依旧放入到RMEM中, 这是因为还有很多Epilogue的处理需要CUDA Core接力进行, 例如Attention的Softmax等. 然后在Blackwell上, 还增加了Tensor Memory进一步降低了寄存器的占用, 从而使得WMMA issue 有更低的代价, 具体的内容将在Blackwell那一节更新.
 
-Arch
-
-Matrix A
-
-MatrixB
-
-MatrixD
-
-Volta
-RFRFRF
-Ampere
-RFRFRF
-Hopper
-RF/SMEMSMEMRF
-Blackwell
-TMEM/SMEMSMEMTMEM
+| Arch | Matrix A | Matrix B | Matrix D |
+| --- | --- | --- | --- |
+| Volta | RF | RF | RF |
+| Ampere | RF | RF | RF |
+| Hopper | RF/SMEM | SMEM | RF |
+| Blackwell | TMEM/SMEM | SMEM | TMEM |
 
 由于TensorCore的操作数在Hopper上也放置到了SMEM. 仅结果矩阵Matrix D占用寄存器资源, 因此在Hopper中可以将一个SM内的4个SubCore组在一起, 4个连续的Warp构成WarpGroup 配合TMA实现4个TensorCore并行的矩阵乘法. WarpGroup MMA还有一个优势可以降低对SMEM的带宽. 如下图所示:
 
@@ -218,59 +245,16 @@ TMAU内部结构如下:
 
 ![图片](assets/982c51f1e377.png)
 
-编号
-
-组件名称
-
-功能描述
-
-604
-
-存储器输入/输出控制器
-
-作为SM和TMAU之间的接口, 接收来自SM的存储器访问请求.
-
-606
-
-内部请求队列
-
-缓存来自SM的请求. 它可以处理两种类型的请求: 张量请求 (需要描述符) 和 非张量请求(线性数据块).
-
-608
-
-描述符高速缓存
-
-缓存最近使用的张量描述符. 由于对同一张量的访问通常具有时间局部性, 该缓存能显著降低获取描述符的延迟. 如果缓存未命中, 会向全局存储器预取描述符.
-
-610
-
-Setup Block
-
-从请求队列中取出请求, 如果是张量请求, 则从描述符缓存中获取描述符. 它负责解析所有参数(来自描述符和请求本身), 进行正确性检查, 并为后续的请求生成器准备好所有必要的计算参数.
-
-616
-
-请求生成器
-
-这是TMAU的核心引擎. 它接收Setup Block准备好的参数, 遍历多维张量空间(或线性地址空间), 迭代计算每个子块的全局存储器地址和共享存储器地址, 检查越界条件, 并生成发送到存储器子系统的底层请求.
-
-618
-
-响应完成跟踪电路
-
-跟踪已发出的每个子请求的状态, 实现了TMAU与SM的异步操作. 当所有子请求都完成时, 它负责触发同步机制.
-
-614
-
-通用网络接口控制器
-
-负责与GPU内部的存储器互连网络进行通信, 发送请求并接收响应.
-
-620
-
-GNIC响应处理器
-
-负责与GPU内部的存储器互连网络进行通信, 对接收响应进行处理.
+| 编号 | 组件名称 | 功能描述 |
+| --- | --- | --- |
+| 604 | 存储器输入/输出控制器 | 作为SM和TMAU之间的接口, 接收来自SM的存储器访问请求. |
+| 606 | 内部请求队列 | 缓存来自SM的请求. 它可以处理两种类型的请求: 张量请求 (需要描述符) 和 非张量请求(线性数据块). |
+| 608 | 描述符高速缓存 | 缓存最近使用的张量描述符. 由于对同一张量的访问通常具有时间局部性, 该缓存能显著降低获取描述符的延迟. 如果缓存未命中, 会向全局存储器预取描述符. |
+| 610 | Setup Block | 从请求队列中取出请求, 如果是张量请求, 则从描述符缓存中获取描述符. 它负责解析所有参数(来自描述符和请求本身), 进行正确性检查, 并为后续的请求生成器准备好所有必要的计算参数. |
+| 616 | 请求生成器 | 这是TMAU的核心引擎. 它接收Setup Block准备好的参数, 遍历多维张量空间(或线性地址空间), 迭代计算每个子块的全局存储器地址和共享存储器地址, 检查越界条件, 并生成发送到存储器子系统的底层请求. |
+| 618 | 响应完成跟踪电路 | 跟踪已发出的每个子请求的状态, 实现了TMAU与SM的异步操作. 当所有子请求都完成时, 它负责触发同步机制. |
+| 614 | 通用网络接口控制器 | 负责与GPU内部的存储器互连网络进行通信, 发送请求并接收响应. |
+| 620 | GNIC响应处理器 | 负责与GPU内部的存储器互连网络进行通信, 对接收响应进行处理. |
 
 注意: 对于非张量请求, 由于不需要处理描述符,可以直接从606请求队列跳转到616请求生成器
 
@@ -320,6 +304,8 @@ cute.nvgpu.cpasync.prefetch_descriptor(tma_atom_a)cute.nvgpu.cpasync.prefetch_de
 
 TMA的地址生成逻辑此时退化为一个简单的线性地址递增器. 对于第 i 个数据块(通常是16字节), 地址计算为:
 
+$$Addr_{global} = SourceAddress + i \times BlockSize$$
+
 对于`张量模式`则需要根据张量描述符生成. 首先在Setup Block中分析获取必要的信息:
 
 从**张量描述符**中获取:
@@ -346,6 +332,8 @@ TMA的地址生成逻辑此时退化为一个简单的线性地址递增器. 对
 
 然后在请求生成器内部实现了一个硬件状态机, 行为等同于一个N维嵌套循环 (N是张量维度)
 
+$$Addr_{global} = BaseAddr + \sum_{i=0}^{N-1} (coord_i \times stride_i)$$
+
 在内部循环的每次迭代中, TMA都会检查当前计算的逻辑坐标 `coord_i` 是否超出了张量描述符中定义的 `TensorSize`, 即每个维度的大小 (tensorSize[0], tensorSize[1], ...). 如果超出, TMA不会去访问这个无效地址, 而是会标记这个元素为越界, 并在后续写入目标地址时使用预设的填充值 (0或者特殊的NaN).
 
 最后对于生成的地址, TMA不会为每个元素都生成一个独立的访存请求. 它会智能地将地址连续的多个元素合并成一个对存储器子系统(如L2缓存)的请求. 请求的大小通常是L2缓存行的大小(例如128B). 这一步骤最大化了存储器总线的利用率.
@@ -354,7 +342,11 @@ TMA的地址生成逻辑此时退化为一个简单的线性地址递增器. 对
 
 首先根据基地址和LogicalOffset计算出逻辑地址
 
+$$Addr_{smem\_logical} = BaseAddr_{smem} + LogicalOffset$$
+
 然后应用Swizzle函数来生成物理地址
+
+$$Addr_{smem\_physical} = Swizzle(Addr_{smem\_logical})$$
 
 这个Swizzle函数通常是基于**地址位的异或(XOR)操作**. 硬件实现起来非常快速和廉价.
 
@@ -369,7 +361,11 @@ Example: 一个简化的64KB共享存储器, 32个Bank, 每个Bank是4字节宽
 使用Swizzle的情况:
 TMA可以应用一个Swizzle函数, 例如:
 
+$$\text{physical\_bank\_id} = \text{logical\_bank\_id}\quad XOR\quad \text{logical\_row\_id}$$
+
 更具体地, 在硬件层面可能是:
+
+$$Addr_{physical}[4:0] = Addr_{logical}[4:0] \oplus Addr_{logical}[9:5]$$
 
 这里, 我们用逻辑地址的高位(行信息)去"扰乱"低位(Bank信息). 现在, 当线程访问逻辑地址0, 32, 64, 96, ...时:
 
@@ -679,65 +675,12 @@ def make_trivial_tiled_mma(    a_dtype: Type[Numeric],    b_dtype: Type[Num
 
 `PipelineAsync`是一个通用的流水线类, 其生产者和消费者都是异步线程. 它也作为其他专用流水线类的基类. 在这个类里定义了`smem_full`和`smem_empty`两个Mbarrier的状态机
 
-屏障
-
-状态
-
-p.acquire
-
-p.commit
-
-c.wait
-
-c.release
-
-empty_bar
-
-empty
-
-<返回>
-
-n/a
-
-n/a
-
--
-
-empty_bar
-
-wait
-
-<阻塞>
-
-n/a
-
-n/a
-
--> empty
-
-full_bar
-
-wait
-
-n/a
-
--> full
-
-<阻塞>
-
-n/a
-
-full_bar
-
-full
-
-n/a
-
--
-
-<返回>
-
-n/a
+| 屏障 | 状态 | p.acquire | p.commit | c.wait | c.release |
+| --- | --- | --- | --- | --- | --- |
+| empty_bar | empty | <返回> | n/a | n/a | - |
+| empty_bar | wait | <阻塞> | n/a | n/a | -> empty |
+| full_bar | wait | n/a | -> full | <阻塞> | n/a |
+| full_bar | full | n/a | - | <返回> | n/a |
 
 这个表格清晰地描述了双屏障同步机制:
 
