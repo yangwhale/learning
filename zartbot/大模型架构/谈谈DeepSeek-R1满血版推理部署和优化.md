@@ -47,7 +47,26 @@
 影响这个报告的因素很多, 例如测试工具是采用vllm的benchmark_serving还是采用sglang.bench_serving, 常用的参数是按照多少Request per seconds(RPS)测试或者按照多少并发量进行测试, 但是DeepSeek-R1的推理Reasoning时间很长, 通常都会选择并发数进行约束.测试在一定的并发数量下的吞吐/延迟等指标. 测试命令如下所示:
 
 ```
-### vLLM的bench测试python3 ~/vllm/benchmarks/benchmark_serving.py --backend vllm \  --model ~/deepseek-R1 --port 8000 \   --dataset-name random \   --random-input 1234 \   --random-output 2345 \   --random-range-ratio 0.8 \   --dataset-path ~/ShareGPT_V3_unfiltered_cleaned_split.json \   --max-concurrency 16 \   --num-prompts 64### sglangM的bench测试python3 -m sglang.bench_serving --backend vllm  \   --model  ~/deepseek-R1  --port 8000 \    --dataset-name=random --random-input=1234 \    --random-output=2345 \    --max-concurrency=64\    --num-prompts=128 \    --random-range-ratio 0.9 \    --dataset-path ~/ShareGPT_V3_unfiltered_cleaned_split.json
+### vLLM的bench测试
+python3 ~/vllm/benchmarks/benchmark_serving.py --backend vllm \
+  --model ~/deepseek-R1 --port 8000 \
+   --dataset-name random \
+   --random-input 1234 \
+   --random-output 2345 \
+   --random-range-ratio 0.8 \
+   --dataset-path ~/ShareGPT_V3_unfiltered_cleaned_split.json \
+   --max-concurrency 16 \
+   --num-prompts 64
+
+### sglangM的bench测试
+python3 -m sglang.bench_serving --backend vllm  \
+   --model  ~/deepseek-R1  --port 8000 \
+    --dataset-name=random --random-input=1234 \
+    --random-output=2345 \
+    --max-concurrency=64\
+    --num-prompts=128 \
+    --random-range-ratio 0.9 \
+    --dataset-path ~/ShareGPT_V3_unfiltered_cleaned_split.json
 ```
 
 除了并发数`max-concurrency`以外, 另两个比较重要的参数是input多少token和output多少token, 这也是非常影响测试结果的. DeepSeek-R1作为一个Reasoning模型, 输出Thinking阶段的token也挺多的, 所以要根据实际的业务需要来进行分析.
@@ -93,19 +112,28 @@
 基于Sglang的部署方式如下, 两台机器安装sglang
 
 ```
-pip install sgl-kernel --force-reinstall --no-depspip install "sglang[all]>=0.4.2.post3" --find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/
+pip install sgl-kernel --force-reinstall --no-deps
+pip install "sglang[all]>=0.4.2.post3" --find-links https://flashinfer.ai/whl/cu124/torch2.5/flashinfer/
 ```
 
 第一台机器执行时, nnodes=2, node-rank=0, dist-init-addr都是第一台机器的IP地址.
 
 ```
-python3 -m sglang.launch_server \  --model-path ~/deepseek-R1/ \  --tp 16 --dist-init-addr 1.1.1.1:20000 \  --nnodes 2 --node-rank 0 \  --trust-remote-code --host 0.0.0.0 --port 8000
+python3 -m sglang.launch_server \
+  --model-path ~/deepseek-R1/ \
+  --tp 16 --dist-init-addr 1.1.1.1:20000 \
+  --nnodes 2 --node-rank 0 \
+  --trust-remote-code --host 0.0.0.0 --port 8000
 ```
 
 第二台机器执行时,--nnodes 2 --node-rank 1
 
 ```
-python3 -m sglang.launch_server \  --model-path ~/deepseek-R1/ \  --tp 16 --dist-init-addr 1.1.1.1:20000 \  --nnodes 2 --node-rank 1 \  --trust-remote-code --host 0.0.0.0 --port 8000
+python3 -m sglang.launch_server \
+  --model-path ~/deepseek-R1/ \
+  --tp 16 --dist-init-addr 1.1.1.1:20000 \
+  --nnodes 2 --node-rank 1 \
+  --trust-remote-code --host 0.0.0.0 --port 8000
 ```
 
 需要注意的是,现阶段Sglang只支持TP并行, PP并行在未来几周可能会支持.
@@ -118,43 +146,96 @@ vLLM需要基于Ray部署, 如下图所示:
 首先需要安装Ray
 
 ```
-pip3 install ray
+pip3 install ray
 ```
 
 然后第一台机器配置
 
 ```
-ray start --head --dashboard-host 0.0.0.0
+ray start --head --dashboard-host 0.0.0.0
 ```
 
 第二个机器根据第一个机器的提示输入加入集群
 
 ```
-ray start --address='<first-node-ip>:6379'
+ray start --address='<first-node-ip>:6379'
 ```
 
 然后检查集群状态
 
 ```
-ray status======== Autoscaler status: 2025-02-07 19:09:06.335568 ========Node status---------------------------------------------------------------Active: 1 node_50018fxxxxx 1 node_11cc6xxxxxPending: (no pending nodes)Recent failures: (no failures)Resources---------------------------------------------------------------Usage: 0.0/256.0 CPU 0.0/16.0 GPU 0B/1.59TiB memory 0B/372.53GiB object_store_memoryDemands: (no resource demands)
+ray status
+======== Autoscaler status: 2025-02-07 19:09:06.335568 ========
+Node status
+---------------------------------------------------------------
+Active:
+ 1 node_50018fxxxxx
+ 1 node_11cc6xxxxx
+Pending:
+ (no pending nodes)
+Recent failures:
+ (no failures)
+
+Resources
+---------------------------------------------------------------
+Usage:
+ 0.0/256.0 CPU
+ 0.0/16.0 GPU
+ 0B/1.59TiB memory
+ 0B/372.53GiB object_store_memory
+
+Demands:
+ (no resource demands)
 ```
 
 然后两台机器都安装vllm, 注意需要安装最新版的vllm 0.7.2性能有很大提升.
 
 ```
-pip3 install vllm
+pip3 install vllm
 ```
 
 最后在第一台机器上开启服务即可, 然后需要根据容忍的最大输入和模型输出调整`max-num-batched-tokens`和`max-model-len`
 
 ```
-vllm serve ~/deepseek-R1 \   --tensor-parallel-size 16 \   --enable-reasoning  \   --reasoning-parser deepseek_r1 \   --max-num-batched-tokens 8192  \   --max-model-len  16384  \   --enable-prefix-caching \   --trust-remote-code \   --enable-chunked-prefill \   --host 0.0.0.0
+vllm serve ~/deepseek-R1 \
+   --tensor-parallel-size 16 \
+   --enable-reasoning  \
+   --reasoning-parser deepseek_r1 \
+   --max-num-batched-tokens 8192  \
+   --max-model-len  16384  \
+   --enable-prefix-caching \
+   --trust-remote-code \
+   --enable-chunked-prefill \
+   --host 0.0.0.0
 ```
 
 单个输入的测试脚本如下
 
 ```
-#test.pyfrom openai import OpenAI# Modify OpenAI's API key and API base to use vLLM's API server.openai_api_key = "EMPTY"openai_api_base = "http://localhost:8000/v1"client = OpenAI(    api_key=openai_api_key,    base_url=openai_api_base,)models = client.models.list()model = models.data[0].id# Round 1messages = [{"role": "user", "content": "what is the presheaf? and how to prove yoneda lemma?"}]response = client.chat.completions.create(model=model, messages=messages)reasoning_content = response.choices[0].message.reasoning_contentcontent = response.choices[0].message.contentprint("reasoning_content:", reasoning_content)print("content:", content)
+#test.py
+from openai import OpenAI
+
+# Modify OpenAI's API key and API base to use vLLM's API server.
+openai_api_key = "EMPTY"
+openai_api_base = "http://localhost:8000/v1"
+
+client = OpenAI(
+    api_key=openai_api_key,
+    base_url=openai_api_base,
+)
+
+models = client.models.list()
+model = models.data[0].id
+
+# Round 1
+messages = [{"role": "user", "content": "what is the presheaf? and how to prove yoneda lemma?"}]
+response = client.chat.completions.create(model=model, messages=messages)
+
+reasoning_content = response.choices[0].message.reasoning_content
+content = response.choices[0].message.content
+
+print("reasoning_content:", reasoning_content)
+print("content:", content)
 ```
 
 #### 5.3 并行策略选择

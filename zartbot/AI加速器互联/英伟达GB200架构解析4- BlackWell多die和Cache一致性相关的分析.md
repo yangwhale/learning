@@ -24,7 +24,7 @@
 
 摩尔定律增速变缓，因此单个GPU芯片的性能曲线最终会达到饱和，但是对算力的需求还在持续增长，因此需要构建多模块GPU封装的模式，通过构建易于制造的基本GPU模块(GPM)，然后通过高带宽低功耗的Die2Die连接构成一个Multi-Chip-Module的MCM-GPU
 
-构建MCM-GPU当时的动机是： 单芯片SM和DRAM增加受到最大Die Size约束()，另一方面良率带来的产能和成本的问题
+构建MCM-GPU当时的动机是： 单芯片SM和DRAM增加受到最大Die Size约束($\leq 800mm^2$)，另一方面良率带来的产能和成本的问题
 
 ![图片](assets/10d00fc5f4f6.png)
 

@@ -42,39 +42,53 @@ DeepSeek-V2模型架构如下
 
 在《大模型时代的数学基础(4)》中谈论了Attention的由来，它来自于当今十分普及的双组件（two-component）的框架： 这个框架的出现可以追溯到19世纪90年代的威廉·詹姆斯， 他被认为是“美国心理学之父” 在这个框架中，受试者基于`非自主性提示(nonvolitional cue)`和`自主性提示(volitional cue)`有选择地引导注意力的焦点。自主性的与非自主性的注意力提示解释了人类的注意力的方式.
 
-`非自主性提示(nonvolitional cue)`和`感官输入(Sensory inputs)`可以通过一个Key-Value Map机制构建,我们可以在内存中构建一个数据库并存放相应的对，定义如下：
+`非自主性提示(nonvolitional cue)`和`感官输入(Sensory inputs)`可以通过一个Key-Value Map机制构建,我们可以在内存中构建一个数据库 $\mathcal{D}$ 并存放相应的 $(k,v)$ 对，定义如下：
+
+$$\mathcal{D} \stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1), \ldots (\mathbf{k}_m, \mathbf{v}_m)\}$$
 
 注意力机制可以通过如下形式化的方法构建：
 
-`自主性提示(volitional cue)`：我们将其定义为一个Query张量
+`自主性提示(volitional cue)`：我们将其定义为一个 $Query$ 张量
 
-`非自主性提示(nonvolitional cue)`：我们将其定义为一个Key张量
+`非自主性提示(nonvolitional cue)`：我们将其定义为一个 $Key$ 张量
 
-`感官输入(Sensory inputs)`：和Key有对应关系的Value张量
+`感官输入(Sensory inputs)`：和Key有对应关系的 $Value$ 张量
 
 ![图片](assets/d58e7ed1a997.png)
 
-注意力汇聚时在神经网络中其实就是一个关于和构成注意力分数，然后乘以得出注意力机制的输出和数据库的函数
+注意力汇聚时在神经网络中其实就是一个关于 $Query$ 和 $Key$ 构成注意力分数，然后乘以 $Value$ 得出注意力机制的输出和数据库 $\mathcal{D}$ 的函数
 
-更一般的来看是和构成注意力权重，然后乘以得出注意力机制的输出
+$$\textrm{Attention}(\mathbf{q}, \mathcal{D}) \stackrel{\textrm{def}}{=} \sum_{i=1}^m \alpha(\mathbf{q}, \mathbf{k}_i) \mathbf{v}_i$$
+
+更一般的来看是 $Query$ 和 $Key$ 构成注意力权重，然后乘以 $Value$ 得出注意力机制的输出
 
 ![图片](assets/8b0cce5a3da8.png)
 
+$$\alpha_i = \alpha(q,k_i)$$
+
 然后输出为
 
-一个简单的和构成注意力权重函数为点乘(dot-product)
+$$o = \Sigma_{i=1}^m softmax(\alpha_i)v_i$$
+
+一个简单的 $Query$ 和 $Key$ 构成注意力权重函数为点乘(dot-product)
+
+$$\alpha(q,k) = q \cdot k$$
 
 然后考虑维度增加后的梯度影响，再对注意力权重进行一个缩放，即：
 
-我们注意到：注意力机制是关于和在某个空间的投射，也有人把它弄的很复杂的去搞一些Hidden Layer，但是都没有前面的点乘机制那样简洁高效。
+$$\alpha(q,k) =q \cdot k/{\sqrt{d_k}}$$
+
+我们注意到：注意力机制是关于 $query$ 和 $key$ 在某个空间的投射，也有人把它弄的很复杂的去搞一些Hidden Layer，但是都没有前面的点乘机制那样简洁高效。
 
 ### 2.2 Self-Attention
 
-而我们注意到Attention机制下，输入的Encoder信息会被处理成为一对对的对，并且存放在内存数据库中
+而我们注意到Attention机制下，输入的Encoder信息会被处理成为一对对的 $(Key,Value)$ 对，并且存放在内存数据库 $\mathcal{D}$ 中
 
-即然是一个数据库，我们又希望模型可以基于相同的注意力机制学习到不同的行为，并且能够捕获序列内各种范围的依赖关系，那么允许注意力机制组合使用，，是否更好呢？这里就引出了`Self-Attention`机制
+$$\mathcal{D} \stackrel{\textrm{def}}{=} \{(\mathbf{k}_1, \mathbf{v}_1), \ldots (\mathbf{k}_m, \mathbf{v}_m)\}$$
 
-Self-Attention机制，通过对输入乘以三个可训练的参数权重矩阵进行线性变换为向量.
+即然是一个数据库，我们又希望模型可以基于相同的注意力机制学习到不同的行为，并且能够捕获序列内各种范围的依赖关系，那么允许注意力机制组合使用 $Query，Key，Value$ ，是否更好呢？这里就引出了`Self-Attention`机制
+
+Self-Attention机制，通过对输入 $X_i$ 乘以三个可训练的参数权重矩阵 $W_q,W_k,W_v$ 进行线性变换为 $Query,Key,Value$ 向量.
 
 ![图片](assets/e29f6aeb7473.png)
 
@@ -92,6 +106,10 @@ Self-Attention机制，通过对输入乘以三个可训练的参数权重矩阵
 
 代数结构上很简单
 
+$$head_i = attention(W_q^iQ,W_k^iK,W_v^iV)$$
+
+$$multihead(Q,K,V)=W_o concat(head_1,head_2,...,head_h)$$
+
 ## 3. Attention的难题
 
 ### 3.1 Attention的时间复杂度
@@ -100,7 +118,7 @@ Self-Attention机制，通过对输入乘以三个可训练的参数权重矩阵
 
 ![图片](assets/0195d4b5df8d.png)
 
-如图所示，Context长度为，计算复杂度，同时考虑全连接层计算复杂度，我们期望于把复杂度降低到Sub-Quadratic。
+如图所示，Context长度为 $N$ ，计算复杂度 $\mathcal O(N^2\cdot D_v)$ ，同时考虑全连接层计算复杂度 $\mathcal O(N^2\cdot D_v+N\cdot D_k^2 )$ ，我们期望于把复杂度降低到Sub-Quadratic。
 
 ### 3.2 Attention的空间复杂度：KV Cache
 
@@ -139,9 +157,11 @@ Self-Attention机制，通过对输入乘以三个可训练的参数权重矩阵
 
 ### 5.1 代数的视角看MHA稀疏化
 
-从代数结构上来看，大模型预训练是一个预层范畴，确定性的Attention稀疏性破坏了态射结构，另一方面对于Word2Vec从表示论(Representation Theory)的视角来看，对于一个有限群的有限维表示,由Maschke定理，如果有非平凡的子表示,则有表示的直和分解,由于是有限维，则存在如下分解
+从代数结构上来看，大模型预训练是一个预层范畴，确定性的Attention稀疏性破坏了态射结构，另一方面对于Word2Vec从表示论(Representation Theory)的视角来看，对于一个有限群 $G$ 的有限维表示 $V$ ,由Maschke定理，如果 $V$ 有非平凡的子表示 $W$ ,则有表示的直和分解 $V=W \oplus U$ ,由于 $V$ 是有限维，则存在如下分解
 
-其中每个子表示都没有非平凡子表示。同时舒尔引理是群与代数的表示论中一个初等但非常有用的命题，对于一个有限群表示可以通过直和分解成多个不可约表示，那么我们就可以将每个不可约表示定义为一个Block，通过Schur引理，使得模型构造出这样的表示？在MLP层处理就是MoE，而在Attention Layer那么就是Mixture-Of-Depth。
+$$V = V_1 \oplus V_2 \oplus ...\oplus V_k$$
+
+其中每个子表示 $V_i$ 都没有非平凡子表示。同时舒尔引理是群与代数的表示论中一个初等但非常有用的命题，对于一个有限群表示可以通过直和分解成多个不可约表示，那么我们就可以将每个不可约表示定义为一个Block，通过Schur引理，使得模型构造出这样的表示？在MLP层处理就是MoE，而在Attention Layer那么就是Mixture-Of-Depth。
 
 另一个角度来看一个用的更广泛的推理优化就是GQA,GQA采用相对密集的Shared KV方式来处理，等同于对Attention空间的均匀采样
 
@@ -151,32 +171,53 @@ Self-Attention机制，通过对输入乘以三个可训练的参数权重矩阵
 
 简单的说就是通过在训练期间构建一个压缩空间，然后在推理阶段针对Decode的Memory Bound问题，通过Up-projection的运算开销来降低访存开销，而Up-Projection恢复KV的运算在计算Attention Score的时候又可以和其它参数矩阵结合。
 
-在MLA中，对于KV采用了一个共享的参数矩阵做down-projection投射到一个低维空间再由独立的参数矩阵做up-projection
+在MLA中，对于KV采用了一个共享的参数矩阵 $W^{DKV}$ 做down-projection投射到一个低维空间再由独立的参数矩阵做up-projection
 
 ![图片](assets/acbd38369fc6.png)
 
 对于MHA
 
+$$
+\left\{
+\begin{aligned}
+q_t & = & W^Qh_t \\
+k_t & = & W^Kh_t \\
+v_t & = & W^Vh_t
+\end{aligned}
+\right.
+$$
+
 而对于MLA
 
-其中针对KV , ，压缩的维度为,针对Q也是位了节省训练阶段的activation Memory消耗采用了压缩 
+$$
+\left\{
+\begin{aligned}
+q_t & = & W^{UQ} & \cdot W^{DQ}h_t \\
+k_t & = & W^{UK} & \cdot W^{DKV}h_t \\
+v_t & = & W^{UV} & \cdot W^{DKV}h_t
+\end{aligned}
+\right.
+$$
 
-对于推理来说，Prefill阶段本来就是算力密集型的，而Decode阶段是内存密集型的，MLA实际上是通过压缩的Latent_KV Cache再进行了一次的乘法运算，通过部分的UP-Projection算力消耗(压缩维度 )在Decode阶段降低了内存占用.
+其中针对KV $d_h=128$ , $n_{head}=128$ ，压缩的维度为 $d_c = 4d_h= 512$ ,针对Q也是位了节省训练阶段的activation Memory消耗采用了压缩 $d_c'= 1536$ 
+
+对于推理来说，Prefill阶段本来就是算力密集型的，而Decode阶段是内存密集型的，MLA实际上是通过压缩的Latent_KV Cache再进行了一次 $W^{UK},W^{UV}$ 的乘法运算，通过部分的UP-Projection算力消耗(压缩维度 $d_c \ll d_hn_h$ )在Decode阶段降低了内存占用.
 
 ![图片](assets/f3d9b4a1b58b.png)
 
-需要注意的是：从恢复KV需要计算Up-projection矩阵， 在计算Attention Score的时候可以和结合，进行一次离线运算即可，实际上并不需要独立的Up-projection运算开销，这样就很巧妙的在不增加算力消耗，同时又降低了KV Cache的开销。
+需要注意的是：从 $C_t^{KV}$ 恢复KV需要计算Up-projection矩阵 $W^{UK},W^{UV}$ ， 在计算Attention Score的时候可以和 $W^{UQ},W^O$ 结合，进行一次离线运算即可，实际上并不需要独立的Up-projection运算开销，这样就很巧妙的在不增加算力消耗，同时又降低了KV Cache的开销。
 
 当然有一个问题是ROPE和Low-Rank压缩不兼容，所以采用了独立的一路来做ROPE然后CONCAT构成Q K矩阵。
 
 ### 5.3 从代数的角度看MLA
 
-从Embedding的角度看，选择更大的词表其表现力会更强，因此DeepSeek也选择了100K词表，可以看作是一个可表空间内对象数量增加，Attention作为词间态射在大规模预训练数据集更多，而这些词间的部分态射可以通过其它词间态射复合的方式构造，那么也就是说提供了一种可能性，可以构建积范畴的形式
+从Embedding的角度看，选择更大的词表其表现力会更强，因此DeepSeek也选择了100K词表，可以看作是一个 $d_h$ 可表空间内对象数量增加，Attention作为词间态射在大规模预训练数据集更多，而这些词间的部分态射可以通过其它词间态射复合的方式构造，那么也就是说提供了一种可能性，可以构建积范畴的形式
 
 ![图片](assets/9d84da0dd964.png)
-的态射可以由表示，Embedding构成的范畴可以由若干个范畴的积的形式表示。以表示论(Representation Theory)的视角来看，我们可以构造一系列子表示的直和形式来构建。
 
-再以统计学的视角，类似于主成分分析的方式对降维投影到低维空间是可行的。另一方面从生物/心理学的角度来看，KV压缩到Latent Space可以看作是对`非自主性提示(nonvolitional cue)`和`感官输入(Sensory inputs)`的模糊化处理也是符合自然规律的一种做法。
+$Y \rightarrow X_1 \times X_2$ 的态射可以由 $f_1,f_2,\pi_1,\pi_2$ 表示，Embedding构成的范畴可以由若干个范畴的积的形式表示。以表示论(Representation Theory)的视角来看，我们可以构造一系列子表示的直和形式来构建。
+
+再以统计学的视角，类似于主成分分析的方式对 $d_h$ 降维投影到低维空间是可行的。另一方面从生物/心理学的角度来看，KV压缩到Latent Space可以看作是对`非自主性提示(nonvolitional cue)`和`感官输入(Sensory inputs)`的模糊化处理也是符合自然规律的一种做法。
 
 因此对于Attention通过Latent Space降低维度是可行的，但是需要注意的是该空间的构建需要在训练阶段，它会直接影响Embedding矩阵并影响词表嵌入的分布，同时KV共享相同的down-projection矩阵使得KV构建在一个相同的基上也是有必要的。
 

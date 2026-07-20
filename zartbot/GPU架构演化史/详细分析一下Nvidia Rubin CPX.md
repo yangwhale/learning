@@ -16,17 +16,12 @@ Rubin CPX是一颗基于Rubin架构但使用GDDR7的芯片. *相对于基于HBM
 
 ![图片](assets/e1fa81d3cce0.jpg)
 
-N3P工艺, 1 x Reticle Size
-
-NVFP4浮点算力 30PFLOPS
-
-128GB GDDR7内存, 内存带宽2TB/s
-
-互连仅支持PCIe Gen6x16, 支持单卡800Gbps带宽
-
-内置了视频编解码, 但是是否带有光线追踪的RTCore未知
-
-针对Attention计算中Softmax相关的指数计算SFU性能比B300提升了3倍
+- N3P工艺, 1 x Reticle Size
+- NVFP4浮点算力 30PFLOPS
+- 128GB GDDR7内存, 内存带宽2TB/s
+- 互连仅支持PCIe Gen6x16, 支持单卡800Gbps带宽
+- 内置了视频编解码, 但是是否带有光线追踪的RTCore未知
+- 针对Attention计算中Softmax相关的指数计算SFU性能比B300提升了3倍
 
 从芯片规格来看, 整体芯片还是对RTX 5090/6000 pro(GB202)的延续, 估计有192个SM, 内存位宽为8 x 64bit-GDDR7, 如下图所示:
 
@@ -105,22 +100,27 @@ Nvidia官方有这样一个描述, Prefill阶段是一个Compute Bound的计算.
 #### 4.2 Rubin CPX 的PD分离策略
 
 我们来探讨几种情况下的Rubin CPX的P-D分离策略.
-4.2.1 Rubin CPX ScaleOut Prefill
+
+##### 4.2.1 Rubin CPX ScaleOut Prefill
+
 首先是针对所有的Rubin CPX, 通过ScaleOut RDMA网络构成集群进行Prefill处理, 再通过PCIe将KVCache传输给Vera或者Rubin进行Decode Generation. 我们可以等效的看作每个ComputeTray 8张卡,每张卡800Gbps带宽构建的一个144卡的Prefill集群, 对于长Context而言, Attention计算应该没有太大的问题, 而ScaleOut带宽是否足够支撑后续的MoE 的EP并行?
 
 其实在Dual-Rack的方案中就是这样的, Rubin CPX Only的机柜只能通过RDMA ScaleOut网络通信. 同时又有大量的KVCache也要通过RDMA网络传输到VR NVL144机柜. KVCache传输和EP的干扰也是一个麻烦事, 毕竟和单机柜的VR CPX NVL144相比, RDMA传输KVCache比起机内直接D2H copy带来了一些不确定性.
 
-4.2.2 Rubin CPX with NVLink
+##### 4.2.2 Rubin CPX with NVLink
+
 然后就是第二个方案, 是否可以借助NVLink的大带宽优势呢? 也就是说Attention计算完了以后, 传递一份Token给Vera, 然后通过NVLink dispatch多份到其它ComputeTray, 然后顺便还可以借助DeepSeek-V3这样的Group方案来做2级的分发, 即按照一个ComputeTray一个Group的方式分配Experts, 然后在Nvlink上减少Dispatch的份数, 避免NVLink上对其它Decoding的任务产生影响(例如Rubin的L2Cache污染/HBM带宽占用等). 这是一个可以探索的方向.
 
 这个方案可以降低一些通信量, 并且把NVLink的一些带宽用起来, 但是Vera CPU并不一定能在PCIe上扛住这么大的带宽, 毕竟8x800Gbps已经达到800GB/s了, 这么大的流量穿越Vera还是有一些潜在的问题的. 那么在3.2节提到的基于PCIe Switch, 让Rubin CPX直接PCIe P2P拷贝到Rubin可能是比官方的VR CPX NVL144更好的方案?
 
-4.2.3 Rubin CPX Attention with Rubin FFN
+##### 4.2.3 Rubin CPX Attention with Rubin FFN
+
 是否能够借助Rubin来做一些Expert的计算? 但是需要考虑整个Timeline如何去做Overlap. 并且不影响Decode. 当然Decode阶段NVLink带宽和GEMM本身的效率来看也需要攒够更大的Batch提升MFU.
 
 可能这种方案有收益, 但额外的极长的Context在Rubin上计算可能对Decode也带来了负收益, 这些取决于SLA标准如何定义, 然后平台如何取舍.
 
-4.2.4 一些混合调度方案
+##### 4.2.4 一些混合调度方案
+
 是否还是在NVL144中配置xPyD的方案, 仅对SeqLen很长的任务Offload到Rubin CPX处理? 这也是一个潜在的可以尝试的调度策略. 因为我们还需要考虑KVcache对显存的占用. Rubin CPX毕竟只有128GB的显存. 例如对于一个256K Seqlen的Prefill最高能到多少并发也需要根据模型计算的.
 
 ### 5. 一些商业上的分析
