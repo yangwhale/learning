@@ -1,0 +1,106 @@
+<svg width="850" height="500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 500" font-family="system-ui, sans-serif">
+  <!-- Background -->
+  <rect width="850" height="500" fill="#FAFAFA" rx="12"/>
+  
+  <!-- Title -->
+  <text x="425" y="30" text-anchor="middle" font-size="17" font-weight="bold" fill="#1A237E">Dispatch → Expert → Combine 完整 Kernel 流水线</text>
+  
+  <!-- Defs -->
+  <defs>
+    <marker id="arrowP" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#546E7A"/>
+    </marker>
+    <marker id="arrowPDL" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#D32F2F"/>
+    </marker>
+    <marker id="arrowBar" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+      <path d="M0,0 L8,3 L0,6" fill="#1565C0"/>
+    </marker>
+  </defs>
+  
+  <!-- ===== DISPATCH PHASE ===== -->
+  <text x="30" y="60" font-size="13" font-weight="bold" fill="#2E7D32">DISPATCH 阶段</text>
+  
+  <!-- Deterministic Prologue -->
+  <rect x="30" y="70" width="150" height="55" fill="#C8E6C9" stroke="#2E7D32" stroke-width="1.5" rx="6" stroke-dasharray="5,3"/>
+  <text x="105" y="92" text-anchor="middle" font-size="11" font-weight="bold" fill="#1B5E20">Deterministic</text>
+  <text x="105" y="107" text-anchor="middle" font-size="11" font-weight="bold" fill="#1B5E20">Prologue (可选)</text>
+  <text x="105" y="122" text-anchor="middle" font-size="9" fill="#546E7A">4 轮 grid sync</text>
+  
+  <!-- Arrow -->
+  <line x1="180" y1="97" x2="198" y2="97" stroke="#546E7A" stroke-width="1.5" marker-end="url(#arrowP)"/>
+  
+  <!-- Main Dispatch -->
+  <rect x="200" y="70" width="180" height="55" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2" rx="6"/>
+  <text x="290" y="92" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">Main Dispatch</text>
+  <text x="290" y="107" text-anchor="middle" font-size="10" fill="#546E7A">Notify → Dispatch → RDMA</text>
+  <text x="290" y="120" text-anchor="middle" font-size="9" fill="#757575">108 SM / 16 步</text>
+  
+  <!-- PDL Arrow -->
+  <line x1="380" y1="97" x2="420" y2="97" stroke="#D32F2F" stroke-width="2" marker-end="url(#arrowPDL)" stroke-dasharray="4,2"/>
+  <text x="400" y="88" text-anchor="middle" font-size="9" font-weight="bold" fill="#D32F2F">PDL</text>
+  
+  <!-- Dispatch Epilogue -->
+  <rect x="422" y="70" width="160" height="55" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+  <text x="502" y="92" text-anchor="middle" font-size="11" font-weight="bold" fill="#1B5E20">Dispatch Epilogue</text>
+  <text x="502" y="107" text-anchor="middle" font-size="10" fill="#546E7A">buffer → recv_x</text>
+  <text x="502" y="120" text-anchor="middle" font-size="9" fill="#757575">132 SM / 链表遍历</text>
+  
+  <!-- ===== EXPERT COMPUTE ===== -->
+  <line x1="582" y1="97" x2="608" y2="97" stroke="#546E7A" stroke-width="1.5" marker-end="url(#arrowP)"/>
+  <rect x="610" y="65" width="210" height="65" fill="#F3E5F5" stroke="#7B1FA2" stroke-width="2" rx="6"/>
+  <text x="715" y="87" text-anchor="middle" font-size="12" font-weight="bold" fill="#4A148C">Expert Compute</text>
+  <text x="715" y="104" text-anchor="middle" font-size="10" fill="#546E7A">FFN / Attention / MoE gate</text>
+  <text x="715" y="120" text-anchor="middle" font-size="9" fill="#757575">用户 kernel，不属于 DeepEP</text>
+  
+  <!-- ===== COMBINE PHASE ===== -->
+  <text x="30" y="170" font-size="13" font-weight="bold" fill="#1565C0">COMBINE 阶段</text>
+  
+  <!-- Main Combine -->
+  <rect x="30" y="180" width="250" height="55" fill="#E3F2FD" stroke="#1565C0" stroke-width="2" rx="6"/>
+  <text x="155" y="202" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">Main Combine</text>
+  <text x="155" y="217" text-anchor="middle" font-size="10" fill="#546E7A">三分支 (A 直通 / B 合发 / C 逐发)</text>
+  <text x="155" y="230" text-anchor="middle" font-size="9" fill="#757575">NVLink bypass / RDMA put</text>
+  
+  <!-- Barrier Arrow -->
+  <line x1="280" y1="207" x2="330" y2="207" stroke="#1565C0" stroke-width="2" marker-end="url(#arrowBar)"/>
+  <text x="305" y="198" text-anchor="middle" font-size="9" font-weight="bold" fill="#1565C0">gpu</text>
+  <text x="305" y="222" text-anchor="middle" font-size="9" font-weight="bold" fill="#1565C0">barrier</text>
+  
+  <!-- Combine Epilogue -->
+  <rect x="332" y="180" width="250" height="55" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="6"/>
+  <text x="457" y="202" text-anchor="middle" font-size="11" font-weight="bold" fill="#0D47A1">Combine Epilogue</text>
+  <text x="457" y="217" text-anchor="middle" font-size="10" fill="#546E7A">去重 → reduce → TMA store</text>
+  <text x="457" y="230" text-anchor="middle" font-size="9" fill="#757575">+ bias 融合 + topk_weights</text>
+  
+  <!-- Output -->
+  <line x1="582" y1="207" x2="608" y2="207" stroke="#546E7A" stroke-width="1.5" marker-end="url(#arrowP)"/>
+  <rect x="610" y="185" width="210" height="45" fill="#E0F2F1" stroke="#00695C" stroke-width="1.5" rx="6"/>
+  <text x="715" y="207" text-anchor="middle" font-size="12" font-weight="bold" fill="#004D40">combined_x</text>
+  <text x="715" y="222" text-anchor="middle" font-size="10" fill="#546E7A">+ combined_topk_weights</text>
+  
+  <!-- ===== KEY DIFFERENCES ===== -->
+  <text x="30" y="275" font-size="13" font-weight="bold" fill="#424242">Dispatch vs Combine 关键差异</text>
+  
+  <!-- Comparison table as boxes -->
+  <rect x="30" y="285" width="390" height="90" fill="white" stroke="#E0E0E0" stroke-width="1" rx="6"/>
+  <text x="225" y="305" text-anchor="middle" font-size="12" font-weight="bold" fill="#2E7D32">Dispatch (散射)</text>
+  <text x="50" y="325" font-size="10" fill="#37474F">• Kernel 结束: PDL 触发 epilogue (无全局 barrier)</text>
+  <text x="50" y="342" font-size="10" fill="#37474F">• Epilogue: buffer → 用户 recv_x (纯搬运)</text>
+  <text x="50" y="359" font-size="10" fill="#37474F">• Warp: Notify + Dispatch + Forward + Scaleout</text>
+  <text x="50" y="369" font-size="10" fill="#37474F">• Barrier tag: kDispatchTag (不与 Combine 冲突)</text>
+
+  <rect x="440" y="285" width="380" height="90" fill="white" stroke="#E0E0E0" stroke-width="1" rx="6"/>
+  <text x="630" y="305" text-anchor="middle" font-size="12" font-weight="bold" fill="#1565C0">Combine (聚合)</text>
+  <text x="460" y="325" font-size="10" fill="#37474F">• Kernel 结束: gpu_barrier (需全局同步)</text>
+  <text x="460" y="342" font-size="10" fill="#37474F">• Epilogue: 去重 + reduce + bias → combined_x</text>
+  <text x="460" y="359" font-size="10" fill="#37474F">• Warp: 全部 warp 均匀分 token (无角色区分)</text>
+  <text x="460" y="369" font-size="10" fill="#37474F">• Barrier tag: kCombineTag0/1 (两轮 barrier)</text>
+
+  <!-- ===== TPU COMPARISON ===== -->
+  <rect x="30" y="395" width="790" height="90" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="50" y="418" font-size="13" font-weight="bold" fill="#283593">TPU 对比：XLA 怎么做同样的事？</text>
+  <text x="50" y="438" font-size="11" fill="#37474F">TPU 的 dispatch/combine 被编译成 ICI all-to-all + reduce-scatter 硬件指令。没有 warp 分工、没有 TMA、</text>
+  <text x="50" y="455" font-size="11" fill="#37474F">没有手动 barrier tag 管理。XLA 保证 correctness，GPU warp specialization 保证 performance flexibility。</text>
+  <text x="50" y="475" font-size="11" fill="#37474F">代价对比：GPU 需要 ~2000 行 CUDA 实现 dispatch+combine；TPU 只需 jax.lax.all_to_all() 一行调用 + XLA 编译。</text>
+</svg>

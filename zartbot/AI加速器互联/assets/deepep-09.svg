@@ -1,0 +1,51 @@
+<svg width="840" height="500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 500" font-family="system-ui, sans-serif">
+  <rect width="840" height="500" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">LLA2A：一次 16B 原子写 = 数据 + 通知</text>
+  <text x="420" y="54" text-anchor="middle" font-size="12" fill="#757575">NVLink 保证 16B store 原子 · 头尾夹双 epoch 标志做自校验</text>
+
+  <!-- The 16B slot -->
+  <text x="60" y="96" font-size="13" font-weight="bold" fill="#37474F">一个 16B slot (uint4)：</text>
+  <rect x="60" y="106" width="170" height="56" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+  <text x="145" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">data_lo</text>
+  <text x="145" y="148" text-anchor="middle" font-size="9" fill="#1565C0">x · 数据低 8B</text>
+  <rect x="230" y="106" width="110" height="56" fill="#FFE082" stroke="#F9A825" stroke-width="2"/>
+  <text x="285" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">epoch</text>
+  <text x="285" y="148" text-anchor="middle" font-size="9" fill="#EF6C00">y · 标志①</text>
+  <rect x="340" y="106" width="170" height="56" fill="#BBDEFB" stroke="#1565C0" stroke-width="2"/>
+  <text x="425" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#0D47A1">data_hi</text>
+  <text x="425" y="148" text-anchor="middle" font-size="9" fill="#1565C0">z · 数据高 8B</text>
+  <rect x="510" y="106" width="110" height="56" fill="#FFE082" stroke="#F9A825" stroke-width="2"/>
+  <text x="565" y="130" text-anchor="middle" font-size="12" font-weight="bold" fill="#E65100">epoch</text>
+  <text x="565" y="148" text-anchor="middle" font-size="9" fill="#EF6C00">w · 标志②</text>
+  <path d="M60 172 L620 172" stroke="#546E7A" stroke-width="1.5"/>
+  <path d="M60 168 L60 176 M620 168 L620 176" stroke="#546E7A" stroke-width="1.5"/>
+  <text x="340" y="190" text-anchor="middle" font-size="11" fill="#546E7A">↑ 一条 st.v4.u32 原子写整块落地（16 字节，不可分割）</text>
+
+  <!-- Send side -->
+  <rect x="60" y="212" width="340" height="120" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="8"/>
+  <text x="75" y="234" font-size="13" font-weight="bold" fill="#1B5E20">发送方 send()</text>
+  <text x="75" y="258" font-size="11" fill="#33691E">把数据拆低/高 8B，夹入两份 epoch，</text>
+  <text x="75" y="276" font-size="11" fill="#33691E">一条原子写送到对端 slot。</text>
+  <text x="75" y="300" font-size="11" fill="#33691E">✅ 一个动作 = 送数据 + 发通知</text>
+  <text x="75" y="320" font-size="10" fill="#558B2F">（不用再单独写 flag，也就没有乱序 bug）</text>
+
+  <!-- Recv side -->
+  <rect x="440" y="212" width="340" height="120" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5" rx="8"/>
+  <text x="455" y="234" font-size="13" font-weight="bold" fill="#E65100">接收方 recv()</text>
+  <text x="455" y="258" font-size="11" fill="#EF6C00">轮询本地 slot，判据只有一句：</text>
+  <text x="455" y="280" font-size="12" font-family="monospace" font-weight="bold" fill="#BF360C">y==epoch &amp;&amp; w==epoch ?</text>
+  <text x="455" y="302" font-size="11" fill="#EF6C00">头尾标志都对 → 数据完整且是本轮的</text>
+  <text x="455" y="322" font-size="10" fill="#F57C00">（批量读多个 slot，一把 AND，保持流水）</text>
+
+  <!-- Double buffer -->
+  <rect x="60" y="348" width="720" height="62" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1" rx="6"/>
+  <text x="75" y="370" font-size="12" font-weight="bold" fill="#6A1B9A">🔁 双缓冲 + epoch 语义</text>
+  <text x="75" y="390" font-size="11" fill="#4A148C">奇/偶 epoch 写不同半区 → 慢读者不被下一轮覆盖；跨 session 复用 epoch +2 → 新标志绝不撞残留值。</text>
+  <text x="75" y="405" font-size="10" fill="#6A1B9A">代价：每 8B 数据拖 8B 标志 = 2× 带宽 → 只用于小消息低延迟。</text>
+
+  <!-- TPU comparison -->
+  <rect x="60" y="424" width="720" height="60" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="75" y="444" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="75" y="463" font-size="11" fill="#37474F">TPU 没有这种「数据夹标志自校验」的手写技巧——芯片间同步由 XLA 在 ICI 上生成的 barrier / 数据依赖保证，</text>
+  <text x="75" y="480" font-size="11" fill="#37474F">正确性是编译期性质。LLA2A 是 GPU 在弱内存模型下，用硬件原子性手工换取低延迟的典型「体操」。</text>
+</svg>

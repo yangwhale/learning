@@ -1,0 +1,74 @@
+<svg width="800" height="520" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 520" font-family="system-ui, sans-serif">
+  <!-- Background -->
+  <rect width="800" height="520" fill="#FAFAFA" rx="12"/>
+  
+  <!-- Title -->
+  <text x="400" y="35" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">Combine 主 Kernel — 三分支决策</text>
+  
+  <!-- Decision node -->
+  <polygon points="400,60 550,110 400,160 250,110" fill="#E8EAF6" stroke="#3F51B5" stroke-width="2"/>
+  <text x="400" y="107" text-anchor="middle" font-size="12" font-weight="bold" fill="#1A237E">expand 模式?</text>
+  <text x="400" y="123" text-anchor="middle" font-size="12" font-weight="bold" fill="#1A237E">multiple_reduction?</text>
+  
+  <!-- Branch labels -->
+  <text x="260" y="170" text-anchor="middle" font-size="11" fill="#757575">非 expand</text>
+  <text x="260" y="184" text-anchor="middle" font-size="11" fill="#757575">或 expand 仅 1 份有效</text>
+  <text x="400" y="170" text-anchor="middle" font-size="11" fill="#757575">expand +</text>
+  <text x="400" y="184" text-anchor="middle" font-size="11" fill="#757575">multi_reduce</text>
+  <text x="560" y="170" text-anchor="middle" font-size="11" fill="#757575">expand +</text>
+  <text x="560" y="184" text-anchor="middle" font-size="11" fill="#757575">非 multi_reduce</text>
+  
+  <!-- Lines from decision -->
+  <line x1="325" y1="135" x2="170" y2="200" stroke="#3F51B5" stroke-width="1.5"/>
+  <line x1="400" y1="160" x2="400" y2="200" stroke="#3F51B5" stroke-width="1.5"/>
+  <line x1="475" y1="135" x2="630" y2="200" stroke="#3F51B5" stroke-width="1.5"/>
+  
+  <!-- Branch A -->
+  <rect x="50" y="200" width="240" height="180" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="8"/>
+  <text x="170" y="225" text-anchor="middle" font-size="14" font-weight="bold" fill="#2E7D32">分支 A：直通</text>
+  <text x="170" y="245" text-anchor="middle" font-size="11" fill="#546E7A">no_local_reduce</text>
+  <line x1="60" y1="255" x2="280" y2="255" stroke="#A5D6A7" stroke-width="1"/>
+  <text x="170" y="275" text-anchor="middle" font-size="11" fill="#37474F">TMA load 源 token</text>
+  <text x="170" y="292" text-anchor="middle" font-size="11" fill="#37474F">↓</text>
+  <text x="170" y="309" text-anchor="middle" font-size="11" fill="#37474F">TMA store 到远端 buffer</text>
+  <text x="170" y="326" text-anchor="middle" font-size="11" fill="#37474F">(NVLink 直达 / RDMA staging)</text>
+  <line x1="60" y1="340" x2="280" y2="340" stroke="#A5D6A7" stroke-width="1"/>
+  <text x="170" y="358" text-anchor="middle" font-size="10" fill="#795548">💡 最简单：只搬不算</text>
+  <text x="170" y="374" text-anchor="middle" font-size="10" fill="#795548">类似快递原件退回</text>
+  
+  <!-- Branch B -->
+  <rect x="310" y="200" width="200" height="180" fill="#FFF3E0" stroke="#E65100" stroke-width="1.5" rx="8"/>
+  <text x="410" y="225" text-anchor="middle" font-size="14" font-weight="bold" fill="#E65100">分支 B：先合再发</text>
+  <text x="410" y="245" text-anchor="middle" font-size="11" fill="#546E7A">local reduce</text>
+  <line x1="320" y1="255" x2="500" y2="255" stroke="#FFCC80" stroke-width="1"/>
+  <text x="410" y="275" text-anchor="middle" font-size="11" fill="#37474F">N 份 topk 副本</text>
+  <text x="410" y="292" text-anchor="middle" font-size="11" fill="#37474F">↓ SMEM BF16 累加</text>
+  <text x="410" y="309" text-anchor="middle" font-size="11" fill="#37474F">1 份 reduce 结果</text>
+  <text x="410" y="326" text-anchor="middle" font-size="11" fill="#37474F">↓ TMA store 到远端</text>
+  <line x1="320" y1="340" x2="500" y2="340" stroke="#FFCC80" stroke-width="1"/>
+  <text x="410" y="358" text-anchor="middle" font-size="10" fill="#795548">💡 省带宽：N 份变 1 份</text>
+  <text x="410" y="374" text-anchor="middle" font-size="10" fill="#795548">类似先在本地合账再转</text>
+  
+  <!-- Branch C -->
+  <rect x="530" y="200" width="230" height="180" fill="#FCE4EC" stroke="#C62828" stroke-width="1.5" rx="8"/>
+  <text x="645" y="225" text-anchor="middle" font-size="14" font-weight="bold" fill="#C62828">分支 C：逐份单发</text>
+  <text x="645" y="245" text-anchor="middle" font-size="11" fill="#546E7A">expanded send</text>
+  <line x1="540" y1="255" x2="750" y2="255" stroke="#EF9A9A" stroke-width="1"/>
+  <text x="645" y="275" text-anchor="middle" font-size="11" fill="#37474F">每个有效 topk 副本</text>
+  <text x="645" y="292" text-anchor="middle" font-size="11" fill="#37474F">↓ 独立 TMA load → store</text>
+  <text x="645" y="309" text-anchor="middle" font-size="11" fill="#37474F">各自发送到远端</text>
+  <text x="645" y="326" text-anchor="middle" font-size="11" fill="#37474F">(NVLink / RDMA 逐条发)</text>
+  <line x1="540" y1="340" x2="750" y2="340" stroke="#EF9A9A" stroke-width="1"/>
+  <text x="645" y="358" text-anchor="middle" font-size="10" fill="#795548">💡 最精确：不丢精度</text>
+  <text x="645" y="374" text-anchor="middle" font-size="10" fill="#795548">类似每份快递单独寄</text>
+  
+  <!-- Bottom summary -->
+  <rect x="50" y="400" width="710" height="50" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="65" y="420" font-size="12" fill="#283593">🔗 TPU 对比: XLA 的 reduce-scatter 编译时就确定策略 (hierarchical / ring)，</text>
+  <text x="65" y="438" font-size="12" fill="#283593">     不像 GPU 需要 runtime 在三条路径间动态选择。TPU 的确定性换来简单性。</text>
+  
+  <!-- Arrows -->
+  <rect x="50" y="460" width="710" height="45" fill="#FFFDE7" stroke="#F9A825" stroke-width="1" rx="6"/>
+  <text x="65" y="478" font-size="11" fill="#F57F17">💡 选择逻辑：A 最快（0 计算），B 最省带宽（N→1 压缩），C 最精确（无 reduce 误差）。</text>
+  <text x="65" y="494" font-size="11" fill="#F57F17">    Qwen3.5 (top-10) 典型用 B：同一 token 在本 rank 有多份 topk 副本时，先本地合再发。</text>
+</svg>

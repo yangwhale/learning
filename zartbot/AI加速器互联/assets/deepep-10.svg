@@ -1,0 +1,61 @@
+<svg width="860" height="520" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 860 520" font-family="system-ui, sans-serif">
+  <rect width="860" height="520" fill="#FAFAFA" rx="12"/>
+  <text x="430" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">GIN：GPU 发起的跨机通信，两种后端</text>
+  <text x="430" y="54" text-anchor="middle" font-size="12" fill="#757575">区别只在「填 RDMA 工单 + 敲网卡门铃」由谁做</text>
+
+  <rect x="30" y="76" width="390" height="220" fill="#E8F5E9" stroke="#2E7D32" stroke-width="2" rx="10"/>
+  <text x="225" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#1B5E20">GDA-KI（GPU 直接指挥网卡）</text>
+  <rect x="55" y="116" width="120" height="50" fill="#C8E6C9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+  <text x="115" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">GPU kernel</text>
+  <text x="115" y="156" text-anchor="middle" font-size="9" fill="#2E7D32">自己填工单+敲门铃</text>
+  <path d="M175 141 L275 141" stroke="#2E7D32" stroke-width="2.5" marker-end="url(#agrn)"/>
+  <text x="225" y="133" text-anchor="middle" font-size="9" fill="#2E7D32">WQE+doorbell</text>
+  <rect x="275" y="116" width="120" height="50" fill="#A5D6A7" stroke="#1B5E20" stroke-width="1.5" rx="6"/>
+  <text x="335" y="140" text-anchor="middle" font-size="12" font-weight="bold" fill="#1B5E20">网卡 NIC</text>
+  <text x="335" y="156" text-anchor="middle" font-size="9" fill="#2E7D32">DOCA/GPUNetIO</text>
+  <text x="70" y="196" font-size="11" fill="#33691E">✅ 全程不碰 CPU，延迟最低</text>
+  <text x="70" y="216" font-size="11" fill="#33691E">⚠️ 要求网卡/驱动支持 GPU 直控</text>
+  <rect x="55" y="232" width="340" height="48" fill="#F1F8E9" stroke="#7CB342" stroke-width="1" rx="6"/>
+  <text x="70" y="252" font-size="10" fill="#558B2F">类比：GPU 自己走到柜台，自填单、自按铃寄件——</text>
+  <text x="70" y="268" font-size="10" fill="#558B2F">快，但要求这家邮局支持自助。</text>
+
+  <rect x="440" y="76" width="390" height="220" fill="#FFF3E0" stroke="#FB8C00" stroke-width="2" rx="10"/>
+  <text x="635" y="100" text-anchor="middle" font-size="15" font-weight="bold" fill="#E65100">PROXY（CPU 跑腿代发）</text>
+  <rect x="460" y="116" width="88" height="50" fill="#FFE0B2" stroke="#FB8C00" stroke-width="1.5" rx="6"/>
+  <text x="504" y="138" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">GPU</text>
+  <text x="504" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">写 128B GFD</text>
+  <rect x="562" y="116" width="72" height="50" fill="#FFCC80" stroke="#EF6C00" stroke-width="1.5" rx="6"/>
+  <text x="598" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">ring</text>
+  <text x="598" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">环形缓冲</text>
+  <rect x="648" y="116" width="80" height="50" fill="#FFB74D" stroke="#E65100" stroke-width="1.5" rx="6"/>
+  <text x="688" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">CPU 代理</text>
+  <text x="688" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">轮询+发件</text>
+  <rect x="742" y="116" width="72" height="50" fill="#FFA726" stroke="#E65100" stroke-width="1.5" rx="6"/>
+  <text x="778" y="138" text-anchor="middle" font-size="10" font-weight="bold" fill="#BF360C">NIC</text>
+  <text x="778" y="154" text-anchor="middle" font-size="8" fill="#EF6C00">verbs</text>
+  <path d="M548 141 L560 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <path d="M634 141 L646 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <path d="M728 141 L740 141" stroke="#EF6C00" stroke-width="2" marker-end="url(#aorg)"/>
+  <text x="480" y="196" font-size="11" fill="#EF6C00">✅ 兼容任何标准 RDMA 网卡</text>
+  <text x="480" y="216" font-size="11" fill="#EF6C00">⚠️ 多一个 CPU 中间人</text>
+  <rect x="460" y="232" width="354" height="48" fill="#FFF8E1" stroke="#FFB300" stroke-width="1" rx="6"/>
+  <text x="475" y="252" font-size="10" fill="#F57C00">类比：GPU 把东西丢进「代寄篮子」，CPU 跑腿小哥</text>
+  <text x="475" y="268" font-size="10" fill="#F57C00">盯着篮子替你跑柜台——多一趟手，但谁都认。</text>
+
+  <rect x="30" y="312" width="800" height="88" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="8"/>
+  <text x="45" y="334" font-size="13" font-weight="bold" fill="#0D47A1">GIN 动作集（网络异步，要显式管完成和通知）</text>
+  <text x="45" y="356" font-size="11" fill="#1565C0">• put / get：写/读远端数据    • putValue：写小立即数    • flush：确保真落地再往下</text>
+  <text x="45" y="376" font-size="11" fill="#1565C0">• signal (SignalInc)：给远端计数器 +1 = 跨机「我发完了」通知    • counter (CounterInc)：本地完成计数</text>
+  <text x="45" y="393" font-size="10" fill="#1976D2">↳ signal 之于 GIN，就像 LLA2A 夹在数据里的 epoch 标志之于 LSA——只是跨机场景拆成了独立通知</text>
+
+  <rect x="30" y="416" width="800" height="88" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1.5" rx="8"/>
+  <text x="45" y="438" font-size="13" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="460" font-size="11" fill="#37474F">GIN ≈ TPU 的 DCN（Data Center Network，跨机那层）；LSA ≈ TPU 的 ICI（芯片间那层）。</text>
+  <text x="45" y="480" font-size="11" fill="#37474F">但 TPU 上「谁发起、走哪条网、怎么分层」全由 XLA 编译器自动决定——没有 GDA-KI vs Proxy 的手工选型，</text>
+  <text x="45" y="497" font-size="11" fill="#37474F">也没有 put/signal/flush 要程序员亲自编排。GPU 这套灵活但要手写，TPU 那套省心但吃编译器。</text>
+
+  <defs>
+    <marker id="agrn" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#2E7D32"/></marker>
+    <marker id="aorg" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0 0 L8 4 L0 8 z" fill="#EF6C00"/></marker>
+  </defs>
+</svg>

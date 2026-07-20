@@ -1,0 +1,63 @@
+<svg width="880" height="560" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 560" font-family="system-ui, sans-serif">
+  <rect width="880" height="560" fill="#FAFAFA" rx="12"/>
+  <text x="440" y="30" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">Hybrid AlltoAll：一个 kernel，两条腿并行</text>
+  <text x="440" y="52" text-anchor="middle" font-size="12" fill="#757575">机内走 LSA 直写 · 跨机走 GIN put · 头尾 barrier 收口</text>
+
+  <!-- timeline spine -->
+  <line x1="70" y1="78" x2="70" y2="500" stroke="#B0BEC5" stroke-width="3"/>
+
+  <!-- Phase 0 -->
+  <circle cx="70" cy="98" r="6" fill="#5C6BC0"/>
+  <rect x="95" y="80" width="740" height="36" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="108" y="103" font-size="12" fill="#283593"><tspan font-weight="bold">阶段0 初始化+信号快照</tspan> · 每个 CTA 认领 signalIndex=blockIdx.x，readSignal 记下计数基线</text>
+
+  <!-- Phase 1 -->
+  <circle cx="70" cy="146" r="6" fill="#8E24AA"/>
+  <rect x="95" y="128" width="740" height="36" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1.5" rx="6"/>
+  <text x="108" y="151" font-size="12" fill="#6A1B9A"><tspan font-weight="bold">阶段1 acquire 屏障</tspan> · 等所有 rank 进 kernel、recvbuf 就绪，本 rank 才开工（防写飞）</text>
+
+  <!-- Two legs region -->
+  <rect x="95" y="176" width="740" height="150" fill="#FFFFFF" stroke="#CFD8DC" stroke-width="1" rx="8" stroke-dasharray="4 3"/>
+  <text x="108" y="194" font-size="11" fill="#607D8B" font-weight="bold">阶段 2 &amp; 3：两条腿并行发数据 ↓↓</text>
+
+  <!-- GIN leg -->
+  <circle cx="70" cy="232" r="6" fill="#E65100"/>
+  <rect x="115" y="210" width="345" height="100" fill="#FFF3E0" stroke="#FB8C00" stroke-width="1.5" rx="6"/>
+  <text x="130" y="232" font-size="12" font-weight="bold" fill="#E65100">阶段2 · 跨机 peer → GIN put</text>
+  <text x="130" y="252" font-size="10.5" fill="#EF6C00">8192 线程联合分片遍历远端 rank</text>
+  <text x="130" y="270" font-size="10.5" fill="#EF6C00">每 put 挂 SignalInc{signalIndex}</text>
+  <text x="130" y="288" font-size="10.5" fill="#EF6C00">→ 到达对端后对端槽位 +1</text>
+  <text x="130" y="304" font-size="9.5" fill="#F57C00">（显式点对点回执）</text>
+
+  <!-- LSA leg -->
+  <circle cx="70" cy="232" r="0" fill="none"/>
+  <rect x="475" y="210" width="345" height="100" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="6"/>
+  <text x="490" y="232" font-size="12" font-weight="bold" fill="#1B5E20">阶段3 · 机内 peer → LSA store</text>
+  <text x="490" y="252" font-size="10.5" fill="#2E7D32">ncclGetLsaPointer 拿对端 recvbuf VA</text>
+  <text x="490" y="270" font-size="10.5" fill="#2E7D32">NVLink 直写，不逐个发通知</text>
+  <text x="490" y="288" font-size="10.5" fill="#2E7D32">→ 可见性交给阶段6 barrier</text>
+  <text x="490" y="304" font-size="9.5" fill="#388E3C">（集体哨声，非点对点）</text>
+
+  <!-- Phase 4 -->
+  <circle cx="70" cy="356" r="6" fill="#C62828"/>
+  <rect x="95" y="338" width="740" height="36" fill="#FCE4EC" stroke="#C62828" stroke-width="1" rx="6"/>
+  <text x="108" y="361" font-size="12" fill="#B71C1C"><tspan font-weight="bold">阶段4 waitSignal</tspan> · 挑一个 CTA 等本 rank 槽位涨到「基线 + 跨机 peer 数」= 跨机包全到</text>
+
+  <!-- Phase 5 -->
+  <circle cx="70" cy="404" r="6" fill="#EF6C00"/>
+  <rect x="95" y="386" width="740" height="36" fill="#FFF8E1" stroke="#FFB300" stroke-width="1" rx="6"/>
+  <text x="108" y="409" font-size="12" fill="#E65100"><tspan font-weight="bold">阶段5 flush</tspan> · 确保本 CTA 的 GIN 操作在网卡侧排空，无未决请求</text>
+
+  <!-- Phase 6 -->
+  <circle cx="70" cy="452" r="6" fill="#8E24AA"/>
+  <rect x="95" y="434" width="740" height="36" fill="#F3E5F5" stroke="#8E24AA" stroke-width="1.5" rx="6"/>
+  <text x="108" y="457" font-size="12" fill="#6A1B9A"><tspan font-weight="bold">阶段6 release 屏障</tspan> · 发布全部 LSA 写入 + 同步 LSA/GIN 双方 → recvbuf 全就绪</text>
+
+  <!-- footer -->
+  <rect x="95" y="484" width="740" height="30" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="108" y="503" font-size="11" fill="#283593">host: cudaStreamSynchronize 回来 → recvbuf 里 NVLink + RDMA 来的数据全部齐活、可见</text>
+
+  <!-- TPU note -->
+  <rect x="95" y="524" width="740" height="28" fill="#E3F2FD" stroke="#1565C0" stroke-width="1" rx="6"/>
+  <text x="108" y="543" font-size="10.5" fill="#0D47A1">🔗 TPU 对比：这七阶段的「发送+同步+可见性」在 TPU 上是 XLA 编译 collective 时自动生成的，程序员只写 jax.lax.all_to_all</text>
+</svg>

@@ -1,0 +1,55 @@
+<svg width="840" height="540" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 540" font-family="system-ui, sans-serif">
+  <rect width="840" height="540" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">对称 VA 的三步拼装</text>
+  <text x="420" y="54" text-anchor="middle" font-size="12" fill="#757575">物理/虚拟解耦 → CPU 端确定性记账 → flat VA 挂载</text>
+
+  <!-- Step 1: cuMem decouple -->
+  <rect x="30" y="74" width="780" height="118" fill="#E8F5E9" stroke="#2E7D32" stroke-width="1.5" rx="8"/>
+  <text x="45" y="96" font-size="13" font-weight="bold" fill="#1B5E20">① cuMem：物理页 / 虚拟地址 解耦</text>
+  <rect x="55" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="130" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">cuMemCreate</text>
+  <text x="130" y="152" text-anchor="middle" font-size="9" fill="#558B2F">物理页 + 可导出 handle</text>
+  <rect x="235" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="310" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">AddressReserve</text>
+  <text x="310" y="152" text-anchor="middle" font-size="9" fill="#558B2F">预留 VA（门牌号）</text>
+  <rect x="415" y="110" width="150" height="60" fill="white" stroke="#66BB6A" rx="6"/>
+  <text x="490" y="134" text-anchor="middle" font-size="11" fill="#1B5E20">cuMemMap</text>
+  <text x="490" y="152" text-anchor="middle" font-size="9" fill="#558B2F">门牌挂到地皮</text>
+  <rect x="595" y="110" width="190" height="60" fill="#FFF3E0" stroke="#FB8C00" rx="6"/>
+  <text x="690" y="130" text-anchor="middle" font-size="11" font-weight="bold" fill="#E65100">Export handle → 邻居</text>
+  <text x="690" y="150" text-anchor="middle" font-size="9" fill="#EF6C00">Import + Map 到同一地址</text>
+  <text x="690" y="164" text-anchor="middle" font-size="9" fill="#EF6C00">← 跨 rank 同地址的根源</text>
+
+  <!-- Step 2: bigSpace bookkeeping -->
+  <rect x="30" y="204" width="780" height="120" fill="#FFF8E1" stroke="#F9A825" stroke-width="1.5" rx="8"/>
+  <text x="45" y="226" font-size="13" font-weight="bold" fill="#F57F17">② bigSpace：纯 CPU 端整数记账器（对称性的来源）</text>
+  <rect x="55" y="240" width="340" height="70" fill="white" stroke="#FBC02D" rx="6"/>
+  <text x="225" y="262" text-anchor="middle" font-size="11" font-weight="bold" fill="#795548">所有 rank 跑同一套注册流程、同一顺序</text>
+  <text x="225" y="282" text-anchor="middle" font-size="11" fill="#795548">→ bigSpace 确定性演化</text>
+  <text x="225" y="300" text-anchor="middle" font-size="11" fill="#795548">→ 各 rank 独立算出相同 bigOffset</text>
+  <rect x="425" y="240" width="360" height="70" fill="#FFFDE7" stroke="#FBC02D" rx="6"/>
+  <text x="605" y="262" text-anchor="middle" font-size="11" font-weight="bold" fill="#8D6E63">💡 婚礼排座：发同一份规则</text>
+  <text x="605" y="282" text-anchor="middle" font-size="10" fill="#8D6E63">每人自己一算就知道自己 &amp; 别人的座位</text>
+  <text x="605" y="300" text-anchor="middle" font-size="10" fill="#8D6E63">零沟通，结果却完全一致</text>
+
+  <!-- Step 3: flat VA -->
+  <rect x="30" y="336" width="780" height="118" fill="#E3F2FD" stroke="#1565C0" stroke-width="1.5" rx="8"/>
+  <text x="45" y="358" font-size="13" font-weight="bold" fill="#0D47A1">③ flat VA：所有 peer 的同名内存挂成一整片连续地址</text>
+  <rect x="55" y="372" width="170" height="48" fill="#BBDEFB" stroke="#1976D2" rx="4"/>
+  <text x="140" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 0 · bigSize</text>
+  <rect x="285" y="392" width="20" height="16" fill="#1565C0"/>
+  <text x="140" y="408" text-anchor="middle" font-size="8" fill="#1565C0">+bigOffset</text>
+  <rect x="225" y="372" width="170" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="310" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 1 · bigSize</text>
+  <rect x="395" y="372" width="170" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="480" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">rank 2 · bigSize</text>
+  <rect x="565" y="372" width="220" height="48" fill="#E1F5FE" stroke="#1976D2" rx="4"/>
+  <text x="675" y="392" text-anchor="middle" font-size="10" font-weight="bold" fill="#0D47A1">... rank N-1 · bigSize</text>
+  <text x="420" y="440" text-anchor="middle" font-size="12" font-family="monospace" fill="#0D47A1">访问 peer x = lsaFlatBase + x*bigSize + bigOffset + userOffset</text>
+
+  <!-- TPU comparison -->
+  <rect x="30" y="466" width="780" height="62" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="45" y="486" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="505" font-size="11" fill="#37474F">TPU 的 HBM 地址映射、跨 chip 寻址由 runtime + XLA 在编译期确定，程序员零感知。GPU 这三步（解耦分配 /</text>
+  <text x="45" y="522" font-size="11" fill="#37474F">确定性记账 / flat 挂载）= 手工复刻 TPU runtime 免费做的「全局地址空间」建立过程。</text>
+</svg>

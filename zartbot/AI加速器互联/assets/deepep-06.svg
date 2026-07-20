@@ -1,0 +1,69 @@
+<svg width="840" height="540" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 840 540" font-family="system-ui, sans-serif">
+  <rect width="840" height="540" fill="#FAFAFA" rx="12"/>
+  <text x="420" y="32" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">Hybrid Combine — 反向两跳 + 通信计算重叠</text>
+  <text x="420" y="54" text-anchor="middle" font-size="12" fill="#757575">NVLink 上行汇聚 → RDMA 下行回源</text>
+
+  <defs>
+    <marker id="hcN" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7" fill="#2E7D32"/>
+    </marker>
+    <marker id="hcR" markerWidth="9" markerHeight="7" refX="9" refY="3.5" orient="auto">
+      <path d="M0,0 L9,3.5 L0,7" fill="#E65100"/>
+    </marker>
+  </defs>
+
+  <!-- Target machine (expert side) -->
+  <rect x="30" y="75" width="360" height="240" fill="#FCE4EC" stroke="#C62828" stroke-width="2" rx="10"/>
+  <text x="210" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#B71C1C">机器 1 — expert 算完的一侧</text>
+
+  <rect x="50" y="115" width="150" height="80" fill="#E8F5E9" stroke="#2E7D32" rx="6"/>
+  <text x="125" y="135" text-anchor="middle" font-size="11" font-weight="bold" fill="#1B5E20">expert peer</text>
+  <text x="125" y="153" text-anchor="middle" font-size="9" fill="#546E7A">Scale-up warp</text>
+  <text x="125" y="168" text-anchor="middle" font-size="9" fill="#546E7A">链表派发</text>
+  <text x="125" y="183" text-anchor="middle" font-size="9" fill="#546E7A">st_release_sys tail</text>
+
+  <rect x="230" y="115" width="140" height="80" fill="#FFF8E1" stroke="#F9A825" stroke-width="1.5" rx="6"/>
+  <text x="300" y="135" text-anchor="middle" font-size="11" font-weight="bold" fill="#F57F17">中转 rank</text>
+  <text x="300" y="153" text-anchor="middle" font-size="9" fill="#546E7A">scaleup_buffer</text>
+  <text x="300" y="168" text-anchor="middle" font-size="9" fill="#546E7A">↓ Forward warp</text>
+  <text x="300" y="183" text-anchor="middle" font-size="9" fill="#546E7A">reduce + 打包</text>
+
+  <!-- NVLink hop up -->
+  <line x1="200" y1="155" x2="230" y2="155" stroke="#2E7D32" stroke-width="3" marker-end="url(#hcN)"/>
+  <text x="215" y="145" text-anchor="middle" font-size="9" font-weight="bold" fill="#2E7D32">NVLink</text>
+
+  <rect x="50" y="210" width="320" height="90" fill="#FFFDE7" stroke="#F9A825" stroke-width="1" rx="6"/>
+  <text x="65" y="230" font-size="11" font-weight="bold" fill="#F57F17">⚡ compute-comm overlap 核心</text>
+  <text x="65" y="248" font-size="10" fill="#795548">combine_reduce 的"等 SMEM release"回调里</text>
+  <text x="65" y="264" font-size="10" fill="#795548">插入 flush_last_tma_and_issue_rdma()</text>
+  <text x="65" y="280" font-size="10" fill="#795548">→ 本轮 reduce 计算 与 上轮 RDMA 发送 重叠</text>
+  <text x="65" y="295" font-size="10" fill="#795548">双缓冲：last_send_buffer 记住上一份待发</text>
+
+  <!-- Source machine -->
+  <rect x="450" y="75" width="360" height="240" fill="#E3F2FD" stroke="#1565C0" stroke-width="2" rx="10"/>
+  <text x="630" y="98" text-anchor="middle" font-size="13" font-weight="bold" fill="#0D47A1">机器 0 — token 的源头</text>
+  <rect x="470" y="120" width="320" height="55" fill="white" stroke="#90A4AE" rx="6"/>
+  <text x="630" y="140" text-anchor="middle" font-size="10" font-weight="bold" fill="#455A64">scaleout_recv_buffer</text>
+  <text x="630" y="157" text-anchor="middle" font-size="9" fill="#757575">RDMA 回来的 expert 结果落地</text>
+  <text x="630" y="170" text-anchor="middle" font-size="9" fill="#757575">scaleout_signaled_tail = RDMA 完成数</text>
+  <rect x="470" y="190" width="320" height="55" fill="#E0F2F1" stroke="#00695C" rx="6"/>
+  <text x="630" y="212" text-anchor="middle" font-size="11" font-weight="bold" fill="#004D40">Combine Epilogue</text>
+  <text x="630" y="229" text-anchor="middle" font-size="9" fill="#546E7A">最终加权求和 + bias → combined_x</text>
+
+  <!-- RDMA hop down -->
+  <line x1="370" y1="250" x2="470" y2="215" stroke="#E65100" stroke-width="3" stroke-dasharray="8,4" marker-end="url(#hcR)"/>
+  <text x="420" y="248" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">RDMA 回源</text>
+
+  <!-- Sync counters -->
+  <rect x="30" y="330" width="780" height="60" fill="#F3E5F5" stroke="#7B1FA2" stroke-width="1" rx="6"/>
+  <text x="45" y="352" font-size="12" font-weight="bold" fill="#4A148C">两个 tail 计数器 = 生产者-消费者同步</text>
+  <text x="45" y="372" font-size="11" fill="#37474F">channel_scaleup_tail = NVLink 送达数（Scale-up warp 生产 → Forward warp 消费，每 3 轮批量推 st_release_sys）</text>
+  <text x="45" y="386" font-size="10" fill="#757575">scaleout_signaled_tail = RDMA 完成数（Forward warp red_add → 源机确认全部到齐）</text>
+
+  <!-- TPU comparison -->
+  <rect x="30" y="400" width="780" height="90" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="45" y="422" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="45" y="442" font-size="11" fill="#37474F">TPU 的 combine = reduce-scatter，跨 slice 用 hierarchical（先 ICI 机内 reduce，再 DCN 跨机），</text>
+  <text x="45" y="460" font-size="11" fill="#37474F">和这里"NVLink 先汇聚→RDMA 回源"完全同构。compute-comm overlap 在 TPU 由 XLA latency-hiding scheduler 自动做，</text>
+  <text x="45" y="478" font-size="11" fill="#37474F">GPU 靠手动把 flush_last 塞进 reduce 回调——同一个思想（算的时候顺手把上一份发出去），一个自动一个手动。</text>
+</svg>

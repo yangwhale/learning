@@ -1,0 +1,63 @@
+<svg width="820" height="470" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 820 470" font-family="system-ui, sans-serif">
+  <rect width="820" height="470" fill="#FAFAFA" rx="12"/>
+  <text x="410" y="34" text-anchor="middle" font-size="18" font-weight="bold" fill="#1A237E">Hybrid 拓扑：world = scaleout × scaleup</text>
+  <text x="410" y="56" text-anchor="middle" font-size="12" fill="#757575">rank_idx = scaleout_rank_idx × kNumScaleupRanks + scaleup_rank_idx</text>
+
+  <!-- Machine A -->
+  <rect x="40" y="80" width="330" height="180" fill="#E3F2FD" stroke="#1565C0" stroke-width="2" rx="10"/>
+  <text x="205" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#0D47A1">机器 0 (scaleout_rank=0)</text>
+  <!-- GPUs in A -->
+  <rect x="60" y="120" width="60" height="55" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="90" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">rank 0</text>
+  <text x="90" y="160" text-anchor="middle" font-size="9" fill="#757575">su=0</text>
+  <rect x="130" y="120" width="60" height="55" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="160" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">rank 1</text>
+  <text x="160" y="160" text-anchor="middle" font-size="9" fill="#757575">su=1</text>
+  <rect x="200" y="120" width="60" height="55" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="230" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">rank 2</text>
+  <text x="230" y="160" text-anchor="middle" font-size="9" fill="#757575">su=2</text>
+  <rect x="270" y="120" width="80" height="55" fill="white" stroke="#42A5F5" rx="6"/>
+  <text x="310" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#1565C0">rank 3</text>
+  <text x="310" y="160" text-anchor="middle" font-size="9" fill="#757575">su=3</text>
+  <!-- NVLink line -->
+  <line x1="70" y1="195" x2="340" y2="195" stroke="#2E7D32" stroke-width="3"/>
+  <text x="205" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2E7D32">NVLink (scaleup / ncclTeamTagLsa)</text>
+  <text x="205" y="232" text-anchor="middle" font-size="9" fill="#546E7A">机内零拷贝对称寻址 · ~1μs</text>
+
+  <!-- Machine B -->
+  <rect x="450" y="80" width="330" height="180" fill="#FCE4EC" stroke="#C62828" stroke-width="2" rx="10"/>
+  <text x="615" y="104" text-anchor="middle" font-size="13" font-weight="bold" fill="#B71C1C">机器 1 (scaleout_rank=1)</text>
+  <rect x="470" y="120" width="60" height="55" fill="white" stroke="#EF5350" rx="6"/>
+  <text x="500" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#C62828">rank 4</text>
+  <text x="500" y="160" text-anchor="middle" font-size="9" fill="#757575">su=0</text>
+  <rect x="540" y="120" width="60" height="55" fill="white" stroke="#EF5350" rx="6"/>
+  <text x="570" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#C62828">rank 5</text>
+  <text x="570" y="160" text-anchor="middle" font-size="9" fill="#757575">su=1</text>
+  <rect x="610" y="120" width="60" height="55" fill="white" stroke="#EF5350" rx="6"/>
+  <text x="640" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#C62828">rank 6</text>
+  <text x="640" y="160" text-anchor="middle" font-size="9" fill="#757575">su=2</text>
+  <rect x="680" y="120" width="80" height="55" fill="white" stroke="#EF5350" rx="6"/>
+  <text x="720" y="143" text-anchor="middle" font-size="11" font-weight="bold" fill="#C62828">rank 7</text>
+  <text x="720" y="160" text-anchor="middle" font-size="9" fill="#757575">su=3</text>
+  <line x1="480" y1="195" x2="750" y2="195" stroke="#2E7D32" stroke-width="3"/>
+  <text x="615" y="215" text-anchor="middle" font-size="11" font-weight="bold" fill="#2E7D32">NVLink (scaleup / ncclTeamTagLsa)</text>
+  <text x="615" y="232" text-anchor="middle" font-size="9" fill="#546E7A">机内零拷贝对称寻址 · ~1μs</text>
+
+  <!-- RDMA between machines -->
+  <line x1="370" y1="150" x2="450" y2="150" stroke="#E65100" stroke-width="4" stroke-dasharray="8,4"/>
+  <text x="410" y="140" text-anchor="middle" font-size="10" font-weight="bold" fill="#E65100">RDMA</text>
+  <text x="410" y="175" text-anchor="middle" font-size="9" fill="#E65100">scaleout</text>
+
+  <!-- Address formula box -->
+  <rect x="40" y="280" width="740" height="70" fill="#FFFDE7" stroke="#F9A825" stroke-width="1" rx="6"/>
+  <text x="55" y="302" font-size="12" fill="#F57F17">💡 编址例子 (kNumScaleupRanks=4):</text>
+  <text x="55" y="322" font-size="11" fill="#795548">rank 6 = scaleout_rank 1 × 4 + scaleup_rank 2 → 机器 1 的第 3 张卡</text>
+  <text x="55" y="340" font-size="11" fill="#795548">要发给 rank 6 → 先 RDMA 跨到机器 1（scaleout 维），再 NVLink 送到 su=2（scaleup 维）= 两跳</text>
+
+  <!-- TPU comparison -->
+  <rect x="40" y="360" width="740" height="90" fill="#E8EAF6" stroke="#3F51B5" stroke-width="1" rx="6"/>
+  <text x="55" y="382" font-size="12" font-weight="bold" fill="#283593">🔗 TPU 对比</text>
+  <text x="55" y="402" font-size="11" fill="#37474F">TPU 的两维拓扑天然存在：ICI（芯片内 mesh，对应 scaleup）+ DCN（跨 pod slice，对应 scaleout）。</text>
+  <text x="55" y="420" font-size="11" fill="#37474F">但 TPU 的 rank 编址由 XLA + mesh topology 自动管理，程序员写 jax.sharding.Mesh 声明维度即可，</text>
+  <text x="55" y="438" font-size="11" fill="#37474F">不用手算 rank_idx。GPU 这里的二维编址 = 手动实现 TPU mesh 的 device_id → (ici, dcn) 映射。</text>
+</svg>
