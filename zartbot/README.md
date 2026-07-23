@@ -141,9 +141,10 @@ _暂无_
 
 ## GPU & 加速器
 
-### GPU架构演化史 (35 篇)
+### GPU架构演化史 (36 篇)
 > 从 SGI 到 Blackwell/Rubin/Groq 的 GPU 架构演进
 
+- [Nvidia Rubin架构分析预览](https://mp.weixin.qq.com/s/mrSaS-MzHgN9CjZnm7J7ig) — [`GPU架构演化史/Nvidia Rubin架构分析预览.md`](GPU架构演化史/Nvidia Rubin架构分析预览.md) 🆕
 - [Groq LPU架构详解](http://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247497933&idx=2&sn=18dd9c7ce69d2fb25c4e1e9fb8d921f1&chksm=f995e80fcee26119b9c223c1dec3f954ea9390aaff566650262bae40bcc0c54d43254394c872#rd) — [`GPU架构演化史/Groq LPU架构详解.md`](GPU架构演化史/Groq LPU架构详解.md)
 - [详细谈谈Rubin + Groq 3 LPU架构](http://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247497933&idx=1&sn=f2a042ca1587dd1f3e4965aeb619da13&chksm=f995e80fcee2611972fe86b17102665c3e530dcd66dc164ba264707768159de8e21eaeb00cab#rd) — [`GPU架构演化史/详细谈谈Rubin + Groq 3 LPU架构.md`](GPU架构演化史/详细谈谈Rubin + Groq 3 LPU架构.md)
 - [谈谈Feynman+LPU的架构](http://mp.weixin.qq.com/s?__biz=MzUxNzQ5MTExNw==&mid=2247497834&idx=2&sn=a08a61944726d7c1ccc5f1dab6e97396&chksm=f995e8a8cee261be15f08b6c05b24c562158538947e8cc37b25c4504bf2d2ce3c13a3282bf9f#rd) — [`GPU架构演化史/谈谈Feynman+LPU的架构.md`](GPU架构演化史/谈谈Feynman+LPU的架构.md)
