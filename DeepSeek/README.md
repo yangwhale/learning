@@ -1,17 +1,17 @@
 # DeepSeek 论文合集（第一篇 → 最新）
 
-DeepSeek-AI 官方论文全收藏，共 **23 篇**，从 2024-01 的 DeepSeek LLM 到 2026-01 的 DeepSeek-OCR 2。PDF 存放在 [`pdfs/`](./pdfs/)，均从 arXiv 下载，文件名按 `年月_名称_arxivID.pdf` 命名（按文件名排序即时间线）。
+DeepSeek-AI 官方论文全收藏，共 **23 篇**，从 2024-01 的 DeepSeek LLM 到 2026-01 的 DeepSeek-OCR 2。PDF 按系列分 **6 个子文件夹**，均从 arXiv 下载，文件名按 `年月_名称_arxivID.pdf` 命名（每个文件夹内按文件名排序即时间线）。
 
 ## 系列速览
 
-| 系列 | 论文 |
-|---|---|
-| **主线 LLM** | DeepSeek LLM → DeepSeekMoE → V2 → V3 → R1 → V3.2 |
-| **代码** | DeepSeek-Coder → Coder-V2 |
-| **数学 / 定理证明** | DeepSeekMath → Prover → Prover-V1.5 → Prover-V2 → Math-V2 |
-| **多模态** | DeepSeek-VL → Janus → JanusFlow → VL2 → Janus-Pro |
-| **架构 / 系统** | ESFT · Fire-Flyer AI-HPC · NSA |
-| **OCR / 光学压缩** | DeepSeek-OCR → OCR 2 |
+| 文件夹 | 系列 | 论文 |
+|---|---|---|
+| [`01-llm`](./01-llm/) | 主线 LLM | DeepSeek LLM → DeepSeekMoE → V2 → V3 → R1 → V3.2 |
+| [`02-code`](./02-code/) | 代码 | DeepSeek-Coder → Coder-V2 |
+| [`03-math`](./03-math/) | 数学 / 定理证明 | DeepSeekMath → Prover → Prover-V1.5 → Prover-V2 → Math-V2 |
+| [`04-multimodal`](./04-multimodal/) | 多模态 | DeepSeek-VL → Janus → JanusFlow → VL2 → Janus-Pro |
+| [`05-systems`](./05-systems/) | 架构 / 系统 | ESFT · Fire-Flyer AI-HPC · NSA |
+| [`06-ocr`](./06-ocr/) | OCR / 光学压缩 | DeepSeek-OCR → OCR 2 |
 
 ## 时间线（23 篇）
 
